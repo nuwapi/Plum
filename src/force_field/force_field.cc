@@ -45,7 +45,8 @@ ForceField::~ForceField () {
 
 void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
                             vector<Molecule>& mols, int phantom_in,
-                            int coion_in) {
+                            int coion_in, int grafted_in,
+                            int grafted_counterion_in) {
   // Initial setting up.
   beta = beta_in;
   npbc = npbc_in;
@@ -56,6 +57,8 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
   vol = box_l[0]*box_l[1]*box_l[2];
   phantom = phantom_in;
   coion = coion_in;
+  grafted = grafted_in;
+  grafted_counterion = grafted_counterion_in;
 
   // Read in.
   string flag;
@@ -1157,6 +1160,20 @@ void ForceField::CoordinateObeyRigidBond(vector<Molecule>& mols) {
   }
 }
 
+double ForceField::EnsureGrafting(vector<Molecule>& mols, int mol_id) {
+  for (int i = 0; i < mols[mol_id].Size(); i++) {
+    if (mols[mol_id].bds[i].Symbol() == "L" &&
+        abs(mols[mol_id].bds[i].GetCrd(1, 2) - 0) > rigid_bond)
+      return kVeryLargeEnergy;
+    else if (mols[mol_id].bds[i].Symbol() == "R" && 
+             abs(mols[mol_id].bds[i].GetCrd(1, 2) - box_l[2]) > rigid_bond)
+      return kVeryLargeEnergy;
+  }
+
+  return 0;
+
+}
+
 int ForceField::GCFrequency() {
   return gc_freq; 
 
@@ -1262,6 +1279,8 @@ void ForceField::UpdateMolCounts(vector<Molecule>& mols) {
       n_aion++;
     }
   }
+
+  n_chain -= grafted;
 
 }
 

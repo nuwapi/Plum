@@ -54,6 +54,12 @@ class Simulation {
   /** Coions are there to neutralize the surface charges represented by the
       phantom molecules. */
   int coion;
+  /** Number of grafted chains, i.e. chains with monomer(s) that have symbol
+      "L" (left, z=0) or "R" (right, z=box_l[2]). */
+  int grafted;
+  /** The counterions need for the grafted chains, the counterions themselves
+      are not grafted. */
+  int grafted_counterion;
   ifstream crd_in;
   ifstream top_in;
   /** Contains info on energy, pressure, Rg etc. */

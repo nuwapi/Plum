@@ -287,7 +287,7 @@ bool ForceField::CBMCFChainInsertion(vector<Molecule>& mols,
     }
   }
 
-  // At this point, the new beads are added with the correct coordinates, but
+  // /At this point, the new beads are added with the correct coordinates, but
   // they still need the proper IDs and energy initialization, also Simulation
   // nParticle fields need to be updated.
   return accept; 
@@ -298,6 +298,8 @@ int ForceField::CBMCFChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
   UpdateMolCounts(mols);
   int spc1;
   if      (gc_chain_len   >  1)  spc1 = n_chain;
+  // It is assumed here that gc_bead_charge has the same charge as the grafted
+  // chains and the coions.
   else if (gc_bead_charge >= 0)  spc1 = n_cion - coion;
   else                           spc1 = n_aion - coion;
 
@@ -305,9 +307,10 @@ int ForceField::CBMCFChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
   delete_id = floor((double)rand_gen()/rand_gen.max() * spc1);
   if (delete_id >= spc1)  delete_id = spc1 - 1;
   if (gc_bead_charge != 0)
-    delete_id = phantom + coion + delete_id * (1 + gc_chain_len);
+    delete_id = phantom + coion + grafted + grafted_counterion +
+                delete_id * (1 + gc_chain_len);
   else
-    delete_id = phantom + coion + delete_id;
+    delete_id = phantom + coion + grafted + grafted_counterion + delete_id;
 
   int second_bead = 0;
   if (gc_bead_charge != 0)  second_bead = 1;

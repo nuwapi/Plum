@@ -53,6 +53,8 @@ const double kEps0 = 0.00552634963;
 const int kNoMoveType = 5;
 
 const double kDz = 0.00001;
+/** Scale the box this number of times when using dipole correction. */
+const int kDiCorrection = 5;
 
 #endif
 

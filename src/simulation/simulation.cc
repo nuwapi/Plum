@@ -41,6 +41,8 @@ Simulation::Simulation() {
   cin >> flag >> calc_chem_pot;
   cin >> flag >> phantom;
   cin >> flag >> coion;
+  cin >> flag >> grafted;
+  cin >> flag >> grafted_counterion;
   cin >> flag >> move_prob[0];
   cin >> flag >> move_prob[1];
   cin >> flag >> move_prob[2];
@@ -103,7 +105,8 @@ Simulation::Simulation() {
   // Read coordinates.
   ReadCrd();
   // Set up ForceField object.
-  force_field.Initialize(beta, npbc, box_l, mols, phantom, coion);
+  force_field.Initialize(beta, npbc, box_l, mols, phantom, coion, grafted,
+                         grafted_counterion);
 
   // Densities.
   density_cumu = 0;
@@ -130,6 +133,7 @@ Simulation::Simulation() {
   // Initialize random number generator using time.
   unsigned s = chrono::system_clock::now().time_since_epoch().count();
   rand_gen.seed(s);
+  cout << "  The random number seed is: " << s << endl;
 
   ///////////////////
   // A few checks. //
@@ -159,11 +163,11 @@ Simulation::Simulation() {
          << "complete." << endl;
     exit(1);
   }
-  if (n_chain == 0 && 1-move_prob[0] > 0) {
+  if (grafted + n_chain == 0 && 1-move_prob[0] > 0) {
     cout << "  Warning: There is no chain in the system but the chain" << endl;
     cout << "           MC move(s) is requested!" << endl;
   }
-  if (n_mol - n_chain == 0 && move_prob[0] > 0) {
+  if (n_mol - grafted - n_chain == 0 && move_prob[0] > 0) {
     cout << "  Warning: There is no single bead in the system but the" << endl; 
     cout << "           bead MC move is requested!" << endl;
   }
@@ -239,10 +243,11 @@ void Simulation::TranslationalMove() {
     int chain_id = -1;
     int ion_id = -1;
     int mol_id = -1;
-    int which_chain = (int)floor((double)rand_gen()/rand_gen.max() * n_chain);
+    int which_chain = (int)floor((double)rand_gen()/rand_gen.max() *
+                                 (grafted + n_chain));
     int which_ion   = (int)floor((double)rand_gen()/rand_gen.max() *
                                  (n_cion + n_aion + n_nion));
-    if (which_chain == n_chain)                 which_chain--;
+    if (which_chain == grafted + n_chain)       which_chain--;
     if (which_ion == n_cion + n_aion + n_nion)  which_ion--;
     int chain_choosing_counter = -1;
     int ion_choosing_counter = -1;
@@ -275,7 +280,7 @@ void Simulation::TranslationalMove() {
       mols[mol_id].BeadTranslate(move_size, box_l, rand_gen);
     }
     // If choose to move a chain and there is one.
-    else if (n_chain > 0) {
+    else if (grafted + n_chain > 0) {
       mol_id = chain_id;
       switch (move_type) {
         case 1:
@@ -295,11 +300,17 @@ void Simulation::TranslationalMove() {
 
     // If a move is actually attempted.
     if ((move_type == 0 && n_cion + n_aion + n_nion > 0) ||
-        (move_type > 0 && n_chain > 0)) {
+        (move_type > 0 && grafted + n_chain > 0)) {
       double dE = 0;
       bool accept = false;
       attempted[move_type]++;
-      dE = force_field.EnergyDifference(mols, mol_id);
+
+      // Assign kVeryLargeEnergy if the polymer leaves the z surfaces.
+      dE = force_field.EnsureGrafting(mols, mol_id);
+      // Only calculate energy difference if grafting is ensured.
+      if (dE < kVeryLargeEnergy)
+        dE = force_field.EnergyDifference(mols, mol_id);
+
       if (dE >= kVeryLargeEnergy) {
         accept = false;
       }
@@ -375,6 +386,7 @@ void Simulation::GCMove() {
   }
 
   UpdateMolCounts();
+  force_field.UpdateMolCounts(mols);
 
 }
 
@@ -399,8 +411,8 @@ double Simulation::RadiusOfGyration() {
         rgAvg += rgMol;
       }
     }
-    if (n_chain > 0) {
-      rgAvg = rgAvg / n_chain;
+    if (grafted + n_chain > 0) {
+      rgAvg = rgAvg / (grafted + n_chain);
     }
   }
 
@@ -441,10 +453,10 @@ string Simulation::RadiusOfGyrationXYZ() {
       }
     }
 
-    if (n_chain > 0) {
-      rgAvgX = rgAvgX / n_chain;
-      rgAvgY = rgAvgY / n_chain;
-      rgAvgZ = rgAvgZ / n_chain;
+    if (grafted + n_chain > 0) {
+      rgAvgX = rgAvgX / (grafted + n_chain);
+      rgAvgY = rgAvgY / (grafted + n_chain);
+      rgAvgZ = rgAvgZ / (grafted + n_chain);
     }
   }
 
@@ -466,8 +478,8 @@ double Simulation::EndToEndDistance() {
         avg_ete += dist*dist;
       }
     }
-    if (n_chain > 0) {
-      avg_ete /= n_chain;
+    if (grafted + n_chain > 0) {
+      avg_ete /= (grafted + n_chain);
     }
   }
 
@@ -578,6 +590,7 @@ void Simulation::ReadCrd() {
     }
   }
 
+  /*
   // Count number of chain molecules.
   n_chain = 0;
   for (int i = phantom; i < (int)mols.size(); i++) {
@@ -585,6 +598,7 @@ void Simulation::ReadCrd() {
       n_chain++; 
     }
   }
+  */
 
   crd_in.close();
 
@@ -730,13 +744,13 @@ void Simulation::Sample() {
     // Pressure //
     //////////////
 
-    if (force_field.UseExtPot()) {
-      force_field.CalcPressureVolScalingHSELSlit(mols);
+    if (force_field.UseExtPot() && step % (sample_freq*10) == 0) {
+    //  force_field.CalcPressureVolScalingHSELSlit(mols);
       //force_field.CalcPressureVirialHSELSlit(mols, density_cumu/ff_avg_counter);
       //force_field.CalcPressureForceELSlit(mols);
     }
-    else {
-      force_field.CalcPressureVolScalingHSELSlit(mols);
+    else if (step % (sample_freq*10) == 0) {
+    //  force_field.CalcPressureVolScalingHSELSlit(mols);
       //force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
       //force_field.CalcPressureVirialEL(mols);
     }
@@ -849,7 +863,7 @@ void Simulation::PrintStat() {
 
 void Simulation::PrintTraj() {
   if (step > steps_eq && step % traj_out_freq == 0) {
-    if (n_chain > 0) {
+    if (grafted + n_chain > 0) {
       traj_p_out << n_chain_b << endl;
       traj_p_out << "STEP: " << step << endl;
     }
@@ -1069,6 +1083,8 @@ void Simulation::UpdateMolCounts() {
       n_nion++;
     }
   }
+
+  n_chain -= grafted;
 
 }
 

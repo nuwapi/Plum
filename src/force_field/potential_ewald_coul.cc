@@ -41,16 +41,13 @@ void PotentialEwaldCoul::ReadParameters() {
   // Determining box size for Ewald, which may not be the same as the rest
   // of the simulation.
   if (dipole_correction) {
-    box_l[2] = box_l[2]*5;  // Why 5 times? See Frenkel and Smit.
+    box_l[2] = box_l[2]*kDiCorrection;  // Why 3-5 times? See Frenkel and Smit.
   }
   box_vol = box_l[0]*box_l[1]*box_l[2];
-  if (dipole_correction) {
-    box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+5*kDz);
-  }
-  else {
+  if (dipole_correction)
+    box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+kDiCorrection*kDz);
+  else
     box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+kDz);
-  }
-
   // Automatically decide real space cutoff. Using unit charge as a criteria.
   real_cutoff = 1;
   while (0.5*lB*1*1*erfc(sqrt(alpha)*real_cutoff)/real_cutoff
@@ -63,7 +60,9 @@ void PotentialEwaldCoul::ReadParameters() {
   }
   // Automaticall decide reciprocal space cutoff.
   repl_cutoff = alpha;
-  while (lB*1*1/(2*kPi*box_vol) * (4*kPi*kPi) * exp(-repl_cutoff/(4*alpha))
+  // In case the boxes are not symmetric with a long z direction.
+  double min_box_vol = pow(box_l[0], 2);
+  while (lB*1*1/(2*kPi*min_box_vol) * (4*kPi*kPi) * exp(-repl_cutoff/(4*alpha))
          / repl_cutoff > kEwaldCutoff) {
     repl_cutoff += alpha;
   }
@@ -91,7 +90,10 @@ void PotentialEwaldCoul::ReadParameters() {
   }
   for (int lz = -repl_cell[2]; lz <= repl_cell[2]; lz++) {
     kz[lz+repl_cell[2]] = lz * 2*kPi / box_l[2];
-    kz_forP[lz+repl_cell[2]] = lz * 2*kPi / (box_l[2] + kDz);
+    if (dipole_correction)
+      kz_forP[lz+repl_cell[2]] = lz * 2*kPi / (box_l[2] + kDiCorrection*kDz);
+    else
+      kz_forP[lz+repl_cell[2]] = lz * 2*kPi / (box_l[2] + kDz);
   }
   for (int lx = -repl_cell[0]; lx <= repl_cell[0]; lx++) {
     for (int ly = -repl_cell[1]; ly <= repl_cell[1]; ly++) {
@@ -142,6 +144,7 @@ double PotentialEwaldCoul::PairEnergyReal(Bead& bead1, Bead& bead2, int npbc) {
         r_vec[2] = dist[2] + k*box_l[2];
         double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
         if (r > 0 && r <= real_cutoff) {
+        //if (r > 0) {
           energy += prefactor * erfc(sqrt(alpha)*r)/r;
         }
       }
@@ -169,44 +172,17 @@ double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc
         r_vec[0] = dist[0] + i*box_l[0];
         r_vec[1] = dist[1] + j*box_l[1];
         if (dipole_correction)
-          r_vec[2] = dist[2] + k*(box_l[2]+kDz*5);
+          r_vec[2] = dist[2] + k*(box_l[2]+kDiCorrection*kDz);
         else
           r_vec[2] = dist[2] + k*(box_l[2]+kDz);
         double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
         if (r > 0 && r <= real_cutoff) {
-      
+        //if (r > 0) {
           energy += prefactor * erfc(sqrt(alpha)*r)/r;
         }
       }
     }
   }
-
-/*
-  if (q1 == q2 && q1 == 1)
-    cout << "test!!!" << energy << " ";
-  energy = 0;
-  GetDistVectorC(bead1, bead2, box_l, npbc, dist);
-
-  for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
-    for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
-      for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
-        double r_vec[3];
-        r_vec[0] = dist[0] + i*box_l[0];
-        r_vec[1] = dist[1] + j*box_l[1];
-        if (dipole_correction)
-          r_vec[2] = dist[2] + k*(box_l[2]);
-        else
-          r_vec[2] = dist[2] + k*(box_l[2]);
-        double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
-        if (r > 0 && r <= real_cutoff) {
-          energy += prefactor * erfc(sqrt(alpha)*r)/r;
-        }
-      }
-    }
-  }
-  if (q1 == q2 && q1 == 1)
-    cout << energy << endl;;
-*/
 
   return energy;
 
@@ -225,6 +201,7 @@ double PotentialEwaldCoul::PairEnergyRepl(Bead& bead1, Bead& bead2, int npbc) {
       for (int lz = 0; lz < repl_ceto[2]; lz++) {
         int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
         if (k2[idx] > 0 && k2[idx] <= repl_cutoff) {
+        //if (k2[idx] > 0) {
           energy += prefactor * ek2[idx]
                     * cos(kx[lx]*r[0] + ky[ly]*r[1] + kz[lz]*r[2]);
         }
@@ -251,6 +228,7 @@ double PotentialEwaldCoul::PairEnergyReplForP(Bead& bead1, Bead& bead2, int npbc
       for (int lz = 0; lz < repl_ceto[2]; lz++) {
         int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
         if (k2_forP[idx] > 0 && k2_forP[idx] <= repl_cutoff) {
+        //if (k2_forP[idx] > 0) {
           energy += prefactor * ek2_forP[idx]
                     * cos(kx[lx]*r[0] + ky[ly]*r[1] + kz_forP[lz]*r[2]);
         }

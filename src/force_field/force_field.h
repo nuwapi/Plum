@@ -34,6 +34,11 @@ class ForceField {
   int phantom;
   /** The number of cions to neutralize surface charge. */
   int coion;
+  /** Number of grafted chains, i.e. chains with monomer(s) that have symbol
+      "L" (left, z=0) or "R" (right, z=box_l[2]). */
+  int grafted;
+  /** The number of counterions used for the grafted chains. */
+  int grafted_counterion;
   /** Chain length of the polymer, assuming they all have the same length.
       *Currently used by vp calc only. */
   int chain_len;
@@ -206,7 +211,7 @@ class ForceField {
   /** Destructor. */
   ~ForceField();
   /** The "true constructor" of the force field. */
-  void Initialize(double, int, double[3], vector<Molecule>&, int, int);
+  void Initialize(double, int, double[3], vector<Molecule>&, int, int, int, int);
   /** Initialize all energy maps / vectors in potentials, set up gc if
       necessary. */
   void InitializeEnergy(vector<Molecule>&);
@@ -258,6 +263,9 @@ class ForceField {
   /** Does all energy initializing for a new molecule. It requires that all IDs
       are properly assigned before hand. */
   void EnergyInitForAddedMolecule(vector<Molecule>&); 
+
+  /** For grafted polymers (L, R). */
+  double EnsureGrafting(vector<Molecule>&, int);
 
   // Utilities.
   /** Return whether GC is used. */
