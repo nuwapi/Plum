@@ -9,6 +9,10 @@ double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
   double pair_e1  = 0;  double pair_e2  = 0;
   double ewald_r1 = 0;  double ewald_r2 = 0;
   double ewald_k1 = 0;  double ewald_k2 = 0;
+//double tot_real = 0;
+//double tot_repl = 0;
+//double tot_self = 0;
+
   int counterion = 0;
   if (gc_bead_charge != 0)  counterion = gc_chain_len;
 
@@ -36,10 +40,13 @@ double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
           }
         }
         ewald_e += (ewald_r1 + ewald_k1 + ewald_r2 + ewald_k2);
+//tot_real += ewald_r1 + ewald_r2;
+//tot_repl += ewald_k1 + ewald_k2;
       }
     }
     if (pair_e >= kVeryLargeEnergy)  break;
   }
+
 
   ////////////////////////////////////////////////////////
   // 2. Loop over the beads in the current trial chain. //
@@ -78,7 +85,8 @@ double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
      }
     }
     ewald_e += (ewald_r1 + ewald_k1 + ewald_r2 + ewald_k2);
-
+//tot_real += ewald_r1 + ewald_r2;
+//tot_repl += ewald_k1 + ewald_k2;
   }
 
   //////////////////////////////////////////////////////
@@ -89,13 +97,26 @@ double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
   }
   if (use_ewald_pot && pair_e < kVeryLargeEnergy) {
     ewald_e += ewald_pot->SelfEnergy(bead1);
-    ewald_e += ewald_pot->SelfEnergy(bead2);
-    ewald_e += ewald_pot->PairEnergyReal(bead1, bead2, npbc);
-    ewald_e += ewald_pot->PairEnergyRepl(bead1, bead2, npbc);
+    ewald_e += 0.5*ewald_pot->PairEnergyReal(bead1, bead1, npbc);
+    ewald_e += 0.5*ewald_pot->PairEnergyRepl(bead1, bead1, npbc);
+
+    if (gc_bead_charge != 0) {
+      ewald_e += ewald_pot->SelfEnergy(bead2);
+      ewald_e += ewald_pot->PairEnergyReal(bead1, bead2, npbc);
+      ewald_e += ewald_pot->PairEnergyRepl(bead1, bead2, npbc);
+      ewald_e += 0.5*ewald_pot->PairEnergyReal(bead2, bead2, npbc);
+      ewald_e += 0.5*ewald_pot->PairEnergyRepl(bead2, bead2, npbc);
+    }
     if (ewald_pot->UseDipoleCorrection())
       ewald_e += ewald_pot->DipoleEDiff(mols, cbmc_chain, bead1, bead2,
                                         current_len, gc_chain_len,
                                         gc_bead_charge,  delete_id);
+
+//tot_real += ewald_pot->PairEnergyReal(bead1, bead2, npbc);
+//tot_repl += ewald_pot->PairEnergyRepl(bead1, bead2, npbc);
+//tot_repl += 0.5*ewald_pot->PairEnergyRepl(bead1, bead1, npbc);
+//tot_repl += 0.5*ewald_pot->PairEnergyRepl(bead2, bead2, npbc);
+//tot_self +=  ewald_pot->SelfEnergy(bead1) + ewald_pot->SelfEnergy(bead2);
   }
 
   /////////////////////////////////////////////////
@@ -107,12 +128,24 @@ double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
       pair_e += ext_pot->BeadEnergy(bead2, box_l);
   }
 
+//if (pair_e < kVeryLargeEnergy) {
+//cout << "xxx " << tot_real << " " << tot_repl << " " << tot_self << endl;
+//double r,k,s;
+//ewald_pot->UpdateEnergyComponents(mols, npbc);
+//r = ewald_pot->GetRealEnergy();
+//k = ewald_pot->GetReplEnergy();
+//s = ewald_pot->GetSelfEnergy();
+//cout << "xxx " << r+k+s << " " << tot_real+tot_repl+tot_self << " " 
+//     << r+k+s+(tot_real+tot_repl+tot_self)*exp(-(r+k+s+tot_real+tot_repl+tot_self)) << endl;
+//}
+
   ////////////////
   // 5. Return. //
   ////////////////
   energy = pair_e + ewald_e;
-  if (pair_e >= kVeryLargeEnergy)
+  if (pair_e >= kVeryLargeEnergy) {
     return kVeryLargeEnergy;
+  }
   return energy;
  
 }
@@ -399,6 +432,7 @@ int ForceField::CBMCFChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
     if (use_ext_pot) {
       ext_pot->AdjustEnergyUponMolDeletion(mols, delete_id); 
     }
+
     return delete_id; 
   }
 
@@ -430,8 +464,8 @@ double ForceField::CalcChemicalPotentialF(vector<Molecule>& mols,
     factorial *= i;
   for (int i = spc2 + 1; i <= spc2 + spc2_add; i++)
     factorial *= i;
-  vol_over_lam *= pow(vol/(gc_deBroglie_prefactor/pow(m1, 1.5)), spc1_add);
-  vol_over_lam *= pow(vol/(gc_deBroglie_prefactor/pow(m2, 1.5)), spc2_add);
+  vol_over_lam *= pow(vol/15.625/(gc_deBroglie_prefactor/pow(m1, 1.5)), spc1_add);
+  vol_over_lam *= pow(vol/15.625/(gc_deBroglie_prefactor/pow(m2, 1.5)), spc2_add);
   double C = vol_over_lam * (1.0/(double)factorial);
 
   int toadd = gc_chain_len;
@@ -453,8 +487,12 @@ double ForceField::CalcChemicalPotentialF(vector<Molecule>& mols,
         xyz[j] = (double)rand_gen() / rand_gen.max() * box_l[j];
       cbmc_chain[i*gc_chain_len].SetAllCrd(xyz);
     }
-    weight *= exp(-beta * BeadsEnergy(cbmc_chain[0], cbmc_chain[i_index], mols, 0,
-                                      -1));
+    double dE = BeadsEnergy(cbmc_chain[0], cbmc_chain[i_index], mols, 0, -1);
+
+    if (dE == kVeryLargeEnergy)
+      weight *= 0;
+    else
+      weight *= exp(-beta * dE);
 
     // The rest.
     for (int i = 1; i < gc_chain_len; i++) {
@@ -486,7 +524,8 @@ double ForceField::CalcChemicalPotentialF(vector<Molecule>& mols,
 
     total += weight * C;
   }
-  
+
+
   return total/(double)mu_tot_ins;
 
 }

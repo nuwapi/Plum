@@ -656,9 +656,9 @@ void PotentialEwald::AdjustEnergyUponMolDeletion(vector<Molecule>& mols,
     }
   }
 
-  //////////////////
-  // Counterions. //
-  //////////////////
+  //////////////////////////////////////////
+  // Counterions with (the rest - chain). //
+  //////////////////////////////////////////
   for (int i = delete_id+1; i <= delete_id+counterion; i++) {
     for (int j = 0; j < (int)mols.size(); j++) {
       if (j < delete_id || j >= i) {

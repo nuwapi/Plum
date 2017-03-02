@@ -8,7 +8,7 @@ const double kSmallNumber = 1E-6;
 /** A medium small number. */
 const double kMedSmallNumber = 1E-4;
 /** For Ewald sum. */
-const double kEwaldCutoff = 1E-4;
+const double kEwaldCutoff = 1E-7;
 /** In unit length. */
 const double kVerySmallDistance = 1E-8;
 /** In kBT. */
@@ -54,7 +54,7 @@ const int kNoMoveType = 5;
 
 const double kDz = 0.00001;
 /** Scale the box this number of times when using dipole correction. */
-const int kDiCorrection = 5;
+const int kDiCorrection = 3;
 
 #endif
 
