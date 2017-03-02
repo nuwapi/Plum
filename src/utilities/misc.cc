@@ -64,6 +64,30 @@ void GetDistVector(Bead& b1, Bead& b2, double box_l[], int npbc,
 
 }
 
+void GetDistVectorC(Bead& b1, Bead& b2, double box_l[], int npbc,
+                    double (&dist)[3]) {
+  // Vector pointing from Bead1 to Bead2.
+  for (int i = 0; i < 3; i++) {
+    double di = b2.GetCrd(0, i) - b1.GetCrd(0, i);
+
+    // Periodic boundary conditions.
+    if (i < npbc) {
+      di -= box_l[i] * round(di / box_l[i]);
+    }
+    // Finding the shortest distance between periodic images.
+    if (abs(di) > box_l[i]/2.0) {
+      if (di < 0) {
+        di += box_l[i];
+      }
+      else {
+        di -= box_l[i];
+      }
+    }
+    dist[i] = di;
+  }
+
+}
+
 void randSphere(double vec[], mt19937& rand_gen) {
   double rand_square = 2;
   double r1, r2;

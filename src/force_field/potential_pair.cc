@@ -99,22 +99,40 @@ void PotentialPair::EnergyInitialization(vector<Molecule>& mols, double box_l[],
 
 }
 
-void PotentialPair::EnergyInitForLastMol(vector<Molecule>& mols, double box_l[],
+void PotentialPair::EnergyInitForLastMol(vector<Molecule>& mols, int chain_len,
+                                         double bead_charge, double box_l[],
                                          int npbc) {
+  double energy = 0;
   int added = 1;
   // Assume all chains are the same and always go before their counterions!!!
   // Assume monovalent ions.
-  for (int i = 0; i < mols[0].Size(); i++)
-    added += (int)abs(round(mols[0].bds[i].Charge()));
+  if (bead_charge != 0)
+    added += chain_len;
 
   for (int i = (int)mols.size()-added; i < (int)mols.size(); i++) {
     for (int j = 0; j < mols[i].Size(); j++) {
-      for (int k = 0; k < (int)mols.size(); k++) {
+      // With existing beads.
+      for (int k = 0; k < (int)mols.size()-added; k++) {
         for (int l = 0; l < mols[k].Size(); l++) {
-          if (i > k || (i == k && j > l)) {
-            int id1 = mols[k].bds[l].ID();
-            int id2 = mols[i].bds[j].ID();
-            double energy;
+          int id1 = min(mols[k].bds[l].ID(), mols[i].bds[j].ID());
+          int id2 = max(mols[k].bds[l].ID(), mols[i].bds[j].ID());
+          if (name == "HardSphere") {
+            energy = 0;
+          }
+          else {
+            energy = PairEnergy(mols[i].bds[j], mols[k].bds[l], box_l, npbc);
+          }
+          E_tot += energy;
+          SetEBothMaps(id1, id2, energy);
+        }
+      }
+
+      // Within added beads.
+      for (int k = (int)mols.size()-added; k <= i; k++) {
+        for (int l = 0; l < mols[k].Size(); l++) {
+          if (k < i || (k == i && l < j)) {
+            int id1 = min(mols[k].bds[l].ID(), mols[i].bds[j].ID());
+            int id2 = max(mols[k].bds[l].ID(), mols[i].bds[j].ID());
             if (name == "HardSphere") {
               energy = 0;
             }
@@ -208,7 +226,7 @@ void PotentialPair::FinalizeEnergyBothMaps(vector<Molecule>& mols,
 
   // Between the moved molecule and the other molecules.
   for (int i = 0; i < (int)mols.size(); i++) {
-    if(i != moved_mol) {
+    if (i != moved_mol) {
       for (int j = 0; j < mols[i].Size(); j++) {
         for (int k = 0; k < mols[moved_mol].Size(); k++) {
           if (mols[moved_mol].bds[k].GetMoved()) {

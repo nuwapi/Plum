@@ -49,7 +49,7 @@ class PotentialPair {
   void EnergyInitialization(vector<Molecule>&, double[], int); 
   /** Initialize a new molecule (requires that the beads have proper IDs).
       Assumes mol is inserted at end of mol array! */
-  void EnergyInitForLastMol(vector<Molecule>&, double[], int); 
+  void EnergyInitForLastMol(vector<Molecule>&, int, double, double[], int);
   /** Calculate the dE due to a MC move. */
   double EnergyDifference(vector<Molecule>&, int, double[], int);
   /** Update all energy maps after the decision of a MC move is made. */

@@ -69,6 +69,7 @@ class Bead {
   /** Calculate the minimum distance between two beads considering all of the
       periodic images. This function uses the trial coordinates! */
   double BBDist(Bead&, double[], int);
+  double BBDistC(Bead&, double[], int);
   double BBDistVec(Bead&, double[], int, int);
   double BBDistVecWithRef(Bead&, Bead&, Bead&, double[], int, int);
   double BBDistScale(Bead&, double[], int, int, double);

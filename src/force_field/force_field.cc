@@ -284,12 +284,8 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
   // Init pressure calculation. //
   ////////////////////////////////
   // Initializing pressure calculation related variables.
-  p_tensor[0] = p_tensor_hs[0] = p_tensor_el[0] = p_tensor_el_tot[0] = 0;
-  p_tensor[1] = p_tensor_hs[1] = p_tensor_el[1] = p_tensor_el_tot[1] = 0;
-  p_tensor[2] = p_tensor_hs[2] = p_tensor_el[2] = p_tensor_el_tot[2] = 0;
-  p_tensor[3] = p_tensor_el[3] = 0;
-  p_tensor[4] = p_tensor_el[4] = 0;
-  p_tensor[5] = p_tensor_el[5] = 0;
+  for (int i = 0; i < 20; i++)
+    p_tensor[i] = p_tensor2[i] = p_tensor3[i] = p_tensor_hs[i] = p_tensor_el[i] = 0;
 
   if (!use_ext_pot) {
     // chain_len number of sites plus 2 that stands for counterion and coion.
@@ -721,9 +717,17 @@ void ForceField::CalcPressureVirialEL(vector<Molecule>& mols) {
 string ForceField::GetPressure() {
   std::ostringstream foo;
   
-  foo << p_tensor[0]    << " " << p_tensor[1]    << " " << p_tensor[2]    << " "
-      << p_tensor_hs[0] << " " << p_tensor_hs[1] << " " << p_tensor_hs[2] << " "
-      << p_tensor_el[0] << " " << p_tensor_el[1] << " " << p_tensor_el[2];
+  foo << p_tensor[0]    << " " << p_tensor[1] << " ";
+
+  for (int i = 0; i < 4; i++) { 
+    for (int j = i; j < 4; j++) {
+      int index = i * 4 + j;
+      foo << "lj" << i << "_" << j << " " << p_tensor2[index] << " ";
+      foo << "el" << i << "_" << j << " " << p_tensor3[index] << " ";
+    }
+  }
+  foo << "dp " << p_tensor2[18] << " ";
+  foo << "id " << p_tensor2[19] << " ";
  
   /* 
   foo << p_tensor[0] << " " << p_tensor[1] << " " << p_tensor[2] << " "
@@ -1104,7 +1108,8 @@ double ForceField::CalcChemicalPotential(vector<Molecule>& mols,
 
 void ForceField::EnergyInitForAddedMolecule(vector<Molecule>& mols) {
   if (use_pair_pot) {
-    pair_pot->EnergyInitForLastMol(mols, box_l, npbc);
+    pair_pot->EnergyInitForLastMol(mols, gc_chain_len, gc_bead_charge,
+                                   box_l, npbc);
   }
   if (use_ewald_pot) {
     ewald_pot->EnergyInitForLastMol(mols, gc_chain_len, gc_bead_charge,
@@ -1114,7 +1119,8 @@ void ForceField::EnergyInitForAddedMolecule(vector<Molecule>& mols) {
     bond_pot->EnergyInitForLastMol(mols, box_l, npbc);
   }
   if (use_ext_pot) {
-    ext_pot->EnergyInitForLastMol(mols, box_l, npbc);
+    ext_pot->EnergyInitForLastMol(mols, gc_chain_len, gc_bead_charge,
+                                  box_l, npbc);
   }
 
 }

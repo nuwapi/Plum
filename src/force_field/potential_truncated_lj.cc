@@ -49,14 +49,23 @@ double PotentialTruncatedLJ::PairEnergy(Bead& bead1, Bead& bead2,
   double energy = 0;
   double r = 0;
   r = bead1.BBDist(bead2, box_l, npbc);
+
   // Arithmetic mixing.
   double sigma = (sigmas[bead1.Symbol()] + sigmas[bead2.Symbol()]) / 2;
   // Geometric mixing.
   double epsilon = sqrt((epsilons[bead1.Symbol()] * epsilons[bead2.Symbol()]));
-  double r6 = pow((sigma/r), 6);
+  double r6;
+
+  if (r > 0)
+    r6 = pow((sigma/r), 6);
+  else
+    r6 = -1;
 
   // Use purely repulsive potential.
-  if (lj_cutoff < 0) {
+  if (r6 == -1) {
+    energy = kVeryLargeEnergy;
+  }
+  else if (lj_cutoff < 0) {
     if (r < sigma) {
       energy = 4 * epsilon * (r6*r6 - r6);
     }
