@@ -103,33 +103,30 @@ int Molecule::NDihed() {
 void Molecule::BeadTranslate(double move_size, double box_l[3],
                              mt19937& rand_gen) {
   double vec[3];
-  randSphere(vec, rand_gen);
 
+  // Routine for translating beads.
+  randSphere(vec, rand_gen);
   double vec_len = sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
   if (vec_len > 0) {
-    vec_len = move_size / vec_len;
+    // 3 times the move size of chains.
+    vec_len = 3*move_size / vec_len;
   }
 
-  int to_move = floor(len * (double)rand_gen()/rand_gen.max());
-  if (to_move == len)  to_move--;
-
-  bds[to_move].SetMoved();
+  bds[0].SetMoved();
 
   for (int i = 0; i < 3; i++) {
-    double old = bds[to_move].GetCrd(0, i);
-    bds[to_move].SetCrd(1, i, old + vec_len * vec[i]);
+    double old = bds[0].GetCrd(0, i);
+    bds[0].SetCrd(1, i, old + vec_len * vec[i]);
   }
 
-  /*
+  /* 
   // Routine for dropping beads randomly in the box.
   vec[0] = (double)rand_gen()/rand_gen.max() * box_l[0];
   vec[1] = (double)rand_gen()/rand_gen.max() * box_l[1];
   vec[2] = (double)rand_gen()/rand_gen.max() * box_l[2];
-  int to_move = floor(len * (double)rand_gen()/rand_gen.max());
-  if (to_move == len)  to_move--;
-  bds[to_move].SetMoved();
+  bds[0].SetMoved();
   for (int i = 0; i < 3; i++) {
-    bds[to_move].SetCrd(1, i, vec[i]);
+    bds[0].SetCrd(1, i, vec[i]);
   }
   */
 

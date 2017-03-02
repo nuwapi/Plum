@@ -47,10 +47,13 @@ class Simulation {
   double move_size;
   /** 1/kBT, should be set to 1. The energy unit of the simulation. */
   double beta;
-  /** The number of phantom beads, they don't have a size and they never
-      move. Phantom beads should be used together with appropriate parameters
-      in the input file. */
+  /** The number of phantom beads, each phantom bead is considered as one
+      molecule, they don't have a size and they never move. Phantom beads
+      should be used together with appropriate parameters in the input file. */
   int phantom;
+  /** Coions are there to neutralize the surface charges represented by the
+      phantom molecules. */
+  int coion;
   ifstream crd_in;
   ifstream top_in;
   /** Contains info on energy, pressure, Rg etc. */

@@ -8,7 +8,7 @@
 
 PotentialTruncatedLJ::PotentialTruncatedLJ(string potential_name)
                                   : PotentialPair(potential_name) {
-  ReadParameters(); 
+  ReadParameters();
 
 }
 

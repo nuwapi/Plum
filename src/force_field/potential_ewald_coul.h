@@ -61,6 +61,11 @@ class PotentialEwaldCoul : public PotentialEwald {
   double DipoleE(vector<Molecule>&, int, int);
   double DipoleEDiff(vector<Molecule>&, vector<Bead>&, Bead&, Bead&, int, int,
                      double, int);
+  /** The forces along Z direction. */
+  double PairForceZReal(Bead&, Bead&, int);
+  double PairForceZRepl(Bead&, Bead&, int);
+  double ForceZDipole(Bead&, double);
+  /** Vector D multiplies the force, see Yethiraj's papers. */
   double PairDForceReal(Bead&, Bead&, Bead&, Bead&, int);
   double PairDForceRepl(Bead&, Bead&, Bead&, Bead&, int);
 

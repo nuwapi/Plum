@@ -30,6 +30,10 @@ class ForceField {
   double box_l[3];
   /** The number of molecules. *Currently used by vp calc only. */
   int n_mol;
+  /** The number of non-mobile phantom molecules. */
+  int phantom;
+  /** The number of cions to neutralize surface charge. */
+  int coion;
   /** Chain length of the polymer, assuming they all have the same length.
       *Currently used by vp calc only. */
   int chain_len;
@@ -63,8 +67,13 @@ class ForceField {
   /** Chain length for the GC added chains. Can only add chain of this length 
       but can delete chains of various length. */
   int gc_chain_len;
-  /** The charge on a GC bead. */
+  /** The charge on a GC bead if assuming all beads have the same charge. */
   int gc_bead_charge;
+  /** An array of length gc_chain_len to define what is the charge on each bead
+      in the polymer chain. Eventually, gc_chain_chg should be read from the
+      input files, but currently, it is defined when force_field.cc
+      initializes. */
+  double * gc_chain_chg;
 
   // Grand canonical ensemble parameters.
   /** The average frequency to perform a GC MC move. */
@@ -108,9 +117,9 @@ class ForceField {
   /*** Bjerrum length for pressure calculation. */
   double lB;
   /** The three diagonal elements for the pressure tensor. */
-  double p_tensor[3];
+  double p_tensor[6];
   double p_tensor_hs[3];
-  double p_tensor_el[3];
+  double p_tensor_el[6];
   double p_tensor_el_tot[3];
   // Virial method to calculate pressure for general systems "vp" for "virial
   // pressure".
@@ -195,7 +204,7 @@ class ForceField {
   /** Destructor. */
   ~ForceField();
   /** The "true constructor" of the force field. */
-  void Initialize(double, int, double[3], int, vector<Molecule>&);
+  void Initialize(double, int, double[3], vector<Molecule>&, int, int);
   /** Initialize all energy maps / vectors in potentials, set up gc if
       necessary. */
   void InitializeEnergy(vector<Molecule>&);
@@ -217,6 +226,7 @@ class ForceField {
   // Pressure in slit. ///////////////////////////////
   /** Update rho(r1,r2) and calculate pressure from the current rho. */
   void CalcPressureVirialHSELSlit(vector<Molecule>&, double);
+  void CalcPressureForceELSlit(vector<Molecule>&);
   /** Initialize the HS and EL multipliers. */
   void InitPressureVirialHSELSlit();
   /** Get pressure components from their storage array. */
