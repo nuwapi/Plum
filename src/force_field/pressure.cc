@@ -38,7 +38,8 @@ void ForceField::InitPressureVirialHSELSlit() {
   vp_slit_el = new double[array_size];
   array_size = vp_d1 * vp_d2 * vp_d3 * vp_d4 * vp_d6;
   vp_slit_hs = new double[array_size];
-  lB = ewald_pot->GetlB();
+  lB = 0;
+  if (use_ewald_pot)  ewald_pot->GetlB();
 
 }
 
@@ -297,6 +298,8 @@ cout<< "\n\n\n\n\n" << endl;
   double oldE = 0;
   double newE = 0;
   double box_l_scaled[3] = {box_l[0], box_l[1], box_l[2]+kDz};
+  double dz = kDz;
+  if (use_ewald_pot && use_ext_pot)  dz = kDz*kDiCorrection;
 
   double * d_com_z;
   if (n_mol != 0)
@@ -415,14 +418,14 @@ cout<< "\n\n\n\n\n" << endl;
         Mz_new += c*(z+d_com_z[i]);
       }
     }
-    double d_di = (lB*2*kPi)*(Mz_new*Mz_new/(box_l[0]*box_l[1]*box_l_scaled[2])
+    double d_di = (lB*2*kPi)*(Mz_new*Mz_new/(box_l[0]*box_l[1]*(box_l[2]+dz))
                              -Mz_old*Mz_old/vol);
     dU += d_di;
     p_tensor[4] += d_di;
   }
 
   // Calculate de Miguel.
-  p_tensor[3] += pow(1.0+kDz/box_l[2], n_mol-phantom)*exp(-beta*dU);
+  p_tensor[3] += pow(1.0+dz/box_l[2], n_mol-phantom)*exp(-beta*dU);
 
   // *** Calculate average from cumulations. ***
   // Yethiraj.
@@ -436,22 +439,23 @@ cout<< "\n\n\n\n\n" << endl;
 
   p_tensor[0] += p_tensor[4];
 
-  p_tensor[0] /= (box_l[0]*box_l[1]*kDz);
+  p_tensor[0] /= (box_l[0]*box_l[1]*dz);
   p_tensor[0] = (beta*p_tensor[2] - p_tensor[0])/vp_z;
-  ///// Print all terms.
+
+  // Calculate Yethiraj components of the average.
   for (int i = 0; i < 4; i++) {
     for (int j = i; j < 4; j++) {
       int index = i * 4 + j;
-      p_tensor2[index] = -p_tensor_hs[index]/(box_l[0]*box_l[1]*kDz*vp_z);
-      p_tensor3[index] = -p_tensor_el[index]/(box_l[0]*box_l[1]*kDz*vp_z);
+      p_tensor2[index] = -p_tensor_hs[index]/(box_l[0]*box_l[1]*dz*vp_z);
+      p_tensor3[index] = -p_tensor_el[index]/(box_l[0]*box_l[1]*dz*vp_z);
 
     }
   }
-  p_tensor2[18] = -p_tensor[4]/(box_l[0]*box_l[1]*kDz*vp_z);
+  p_tensor2[18] = -p_tensor[4]/(box_l[0]*box_l[1]*dz*vp_z);
   p_tensor2[19] = beta*p_tensor[2]/vp_z; 
-  /////
+
   // de Miguel.
-  p_tensor[1] = beta/(box_l[0]*box_l[1]*kDz)*log(p_tensor[3]/vp_z);
+  p_tensor[1] = beta/(box_l[0]*box_l[1]*dz)*log(p_tensor[3]/vp_z);
 
 
 /*/////////////////////////////////////////
