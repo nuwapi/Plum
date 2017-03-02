@@ -77,6 +77,8 @@ class PotentialEwald {
   virtual double DipoleE(vector<Molecule>&) = 0;
   virtual double DipoleE(vector<Molecule>&, vector<Bead>&) = 0;
   virtual double DipoleE(vector<Molecule>&, int, int) = 0;
+  virtual double DipoleEDiff(vector<Molecule>&, vector<Bead>&, Bead&, Bead&,
+                             int, int, double, int) = 0;
   // Partial U partial V.
   double PUPV(vector<Molecule>&, double, int);
   double RDotF(vector<Molecule>&, double, int);
@@ -133,7 +135,7 @@ class PotentialEwald {
   /** Only for debug purposes. */
   double GetSelfEnergy();
   virtual double GetlB() = 0;
-
+  bool UseDipoleCorrection();
 }; 
 
 #endif

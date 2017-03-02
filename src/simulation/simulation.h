@@ -34,13 +34,13 @@ class Simulation {
   long steps;
   /** Number of steps of equilibration, which are not counted towards sampling.
     */
-  int steps_eq;
+  long steps_eq;
   /** The frequency to calculate energy, force, density, Rg etc. */
-  int sample_freq;
+  long sample_freq;
   /** The frequency to print energy, force etc. */
-  int stat_out_freq;
+  long stat_out_freq;
   /** The frequency to print trajectory file. */
-  int traj_out_freq;
+  long traj_out_freq;
   /** The number of dimensions to apply PBC, use 2 or 3. */
   int npbc;
   /** The length of displacement for random moves, in unit length. */
@@ -55,9 +55,17 @@ class Simulation {
   ifstream top_in;
   /** Contains info on energy, pressure, Rg etc. */
   ofstream info_out;
-  ofstream traj_out;
-  ofstream crd_last_out;
+  /** For polymer trajectories. */
+  ofstream traj_p_out;
+  /** For cation trajectories. */
+  ofstream traj_c_out;
+  /** For anion trajectories. */
+  ofstream traj_a_out;
+  /** For "neutral ion" trajectories. */
+  ofstream traj_n_out;
+  ofstream crd_last_out[2];
   ofstream top_last_out;
+  ofstream rho_last_out[2];
 
   /////////////////////////////////////////////
   // Parameters read from top and crd files. //
@@ -68,6 +76,14 @@ class Simulation {
   int n_mol;
   /** Total number of chain Molecules. */
   int n_chain;
+  /** Total number of beads in all chains. */
+  int n_chain_b;
+  /** Total number cations. */
+  int n_cion;
+  /** Total number fo anions. */
+  int n_aion;
+  /** Total number of "neutral ions". */
+  int n_nion;
   /** The x,y,z length of the simulation box, unit length. */
   double box_l[3];
   /** The probabilities to choose one of the four MC translational moves. */
@@ -99,6 +115,9 @@ class Simulation {
   double ext_e_cumu;
   /** Running total density value. */
   double density_cumu;
+  int density_z_bin;
+  double density_z_res;
+  double * density_z_cumu;
   double rg_tot_cumu;
   double rg_x_cumu;
   double rg_y_cumu;
@@ -141,6 +160,7 @@ class Simulation {
   ////////////////
   /** Sample energy, pressure, molecular conformation etc. */
   void Sample();
+  void CalcRhoZ();
   /** Calculates average value of sqrt(Rg^2) for all chains. */
   double RadiusOfGyration();
   string RadiusOfGyrationXYZ();
@@ -149,6 +169,7 @@ class Simulation {
   /** Always generate new ID, never reuse. Warning: could run out of id due to
       int out of bound error. */
   int GenBeadID();
+  void UpdateMolCounts();
 
   ///////////////////////////////////
   // Read input crd and top files. //
@@ -165,6 +186,7 @@ class Simulation {
   void PrintTraj();
   void PrintLastCrd();
   void PrintLastTop();
+  void PrintLastRhoZ();
   void PrintEndToEndVector();
 
 };

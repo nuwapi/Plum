@@ -150,6 +150,43 @@ class ForceField {
   double * vp_hs_rr_lsx;
   double * vp_hs_rr_lsx2;
   double * vp_hs_rr_lsy;
+  // Pressure in slit. ///////////////////////////////
+  /** rho(r1, r2) for slit system. */
+  double * vp_slit_rho;
+  /** HS multiplier for slit system. */
+  double * vp_slit_hs;
+  /** EL multiplier for slit system. */
+  double * vp_slit_el;
+  /** Degree of polymerization of the polymer. */
+  int vp_slit_Nm;
+  /** Number of bins used for dimesion z1. */
+  int vp_slit_z1_bin;
+  /** Number of bins used for dimesion z2. */
+  int vp_slit_z2_bin;
+  /** Number of bins used for dimesion a12. */
+  int vp_slit_a_bin;
+  /** Bin resolution for dimesion z1. */
+  double vp_slit_z1_res;
+  /** Bin resolution for dimesion z2. */
+  double vp_slit_z2_res;
+  /** Bin resolution for dimesion a12. */
+  double vp_slit_a_res;
+  /** Margin for r12 = sigma. */
+  double vp_slit_margin;
+  /** The volume of the cylinder. */
+  double vp_slit_vol;
+  /** Dimension 1: Nm + 2. */
+  int vp_d1;
+  /** Dimension 2: Nm + 2. */
+  int vp_d2;
+  /** Dimension 3: vp_slit_z1_bin. */
+  int vp_d3;
+  /** Dimension 4: vp_slit_z2_bin. */
+  int vp_d4;
+  /** Dimension 5: vp_slit_a_bin. */
+  int vp_d5;
+  /** Dimension 6: 3 (x, y, z). */
+  int vp_d6;
 
  public:
   // Initialization functions.
@@ -177,6 +214,11 @@ class ForceField {
       components. */
   void CalcPressureVirialHSEL(vector<Molecule>&, double);
   void CalcPressureVirialEL(vector<Molecule>&);
+  // Pressure in slit. ///////////////////////////////
+  /** Update rho(r1,r2) and calculate pressure from the current rho. */
+  void CalcPressureVirialHSELSlit(vector<Molecule>&, double);
+  /** Initialize the HS and EL multipliers. */
+  void InitPressureVirialHSELSlit();
   /** Get pressure components from their storage array. */
   string GetPressure();
 
@@ -191,6 +233,15 @@ class ForceField {
   /** Chain deletion. */
   int CBMCChainDeletion(vector<Molecule>&, mt19937&);
   double CalcChemicalPotential(vector<Molecule>&, mt19937&);
+  ///////////////////////////////
+  // Full-bias CBMC functions. //
+  ///////////////////////////////
+  double BeadsEnergy(Bead&, Bead&, vector<Molecule>&, int, int);
+  double CBMCFGenTrialBeads(Bead&, vector<Molecule>&, int, mt19937&, int);
+  bool CBMCFChainInsertion(vector<Molecule>&, mt19937&);
+  int CBMCFChainDeletion(vector<Molecule>&, mt19937&);
+  double CalcChemicalPotentialF(vector<Molecule>&, mt19937&);
+  // END.
   /** Does all energy initializing for a new molecule. It requires that all IDs
       are properly assigned before hand. */
   void EnergyInitForAddedMolecule(vector<Molecule>&); 

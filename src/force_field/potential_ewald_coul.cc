@@ -305,6 +305,65 @@ double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols, int delete_id,
 
 }
 
+double PotentialEwaldCoul::DipoleEDiff(vector<Molecule>& mols,
+                                       vector<Bead>& cbmc_chain,
+                                       Bead& bead1, Bead& bead2, 
+                                       int current_len, int gc_chain_len,
+                                       double gc_bead_charge, int delete_id) {
+  double Mz_n = 0;
+  double Mz_o = 0;
+  int counterion = 0;
+  if (gc_bead_charge != 0)  counterion = gc_chain_len;
+
+  // Mols.
+  if (delete_id >= 0) {
+    for (int i = 0; i < (int)mols.size(); i++) {
+      if (i < delete_id && i > delete_id+counterion) {
+        for (int j = 0; j < mols[i].Size(); j++) {
+          double z = mols[i].bds[j].GetCrd(0, 2);
+          double c = mols[i].bds[j].Charge();
+          Mz_o += c*z;
+        }
+      }
+    }
+  }
+  else {
+    for (int i = 0; i < (int)mols.size(); i++) {
+      for (int j = 0; j < mols[i].Size(); j++) {
+        double z = mols[i].bds[j].GetCrd(0, 2);
+        double c = mols[i].bds[j].Charge();
+        Mz_o += c*z;
+      }
+    }
+  }
+  // CBMC chain.
+  for (int i = 0; i < current_len; i++) {
+    double z = cbmc_chain[i].GetCrd(0, 2);
+    double c = cbmc_chain[i].Charge();
+    Mz_o += c*z;
+  }
+  if (gc_bead_charge != 0) {
+    for (int i = gc_chain_len; i < gc_chain_len+current_len; i++) {
+      double z = cbmc_chain[i].GetCrd(0, 2);
+      double c = cbmc_chain[i].Charge();
+      Mz_o += c*z;
+    }
+  }
+  // These beads.
+  Mz_n = Mz_o;
+  double z = bead1.GetCrd(0, 2);
+  double c = bead1.Charge();
+  Mz_n += c*z;
+  if (gc_bead_charge != 0) {
+    z = bead2.GetCrd(0, 2);
+    c = bead2.Charge();
+    Mz_n += c*z;
+  }
+
+  return - lB * 2*kPi/box_vol * (Mz_n*Mz_n - Mz_o*Mz_o);
+
+}
+
 double PotentialEwaldCoul::GetlB() {
   return lB;
 

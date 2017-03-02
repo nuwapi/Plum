@@ -21,18 +21,25 @@ ForceField::ForceField () {
 
 ForceField::~ForceField () {
   delete [] cbmc_trial_weights;
-  delete [] vp_hs_g;
-  delete [] vp_hs_rr;
-  delete [] vp_hs_g_lsx;
-  delete [] vp_hs_g_lsy;
-  delete [] vp_zwall_rr;
-  delete [] vp_hs_rr_lsx;
-  delete [] vp_hs_rr_lsx2;
-  delete [] vp_hs_rr_lsy;
-  delete [] vp_el_rrx;
-  delete [] vp_el_rry;
-  delete [] vp_el_rrz;
-
+  
+  if (!use_ext_pot) {
+    delete [] vp_hs_g;
+    delete [] vp_hs_rr;
+    delete [] vp_hs_g_lsx;
+    delete [] vp_hs_g_lsy;
+    delete [] vp_zwall_rr;
+    delete [] vp_hs_rr_lsx;
+    delete [] vp_hs_rr_lsx2;
+    delete [] vp_hs_rr_lsy;
+    delete [] vp_el_rrx;
+    delete [] vp_el_rry;
+    delete [] vp_el_rrz;
+  }
+  else {
+    delete [] vp_slit_rho;
+    delete [] vp_slit_hs;
+    delete [] vp_slit_el;
+  }
 }
 
 void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
@@ -200,11 +207,13 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     cout << "        given to the \"rigid bond\",  the \"hard sphere" << endl;
     cout << "        potential\" and the \"hard wall potential\"" << endl;
   }
-  if (pair_pot->PotentialName() == "HardSphere") {
-    cout << "  Note: If hard sphere potential is used, all inital pair" << endl;
-    cout << "        energies of adjacent beads will be set to 0" << endl;
-    cout << "        assuming the input coordinates have no overlap!!!" << endl;
-    cout << "        This is to avoid precision-caused overlaps." << endl;
+  if (use_pair_pot) {
+    if (pair_pot->PotentialName() == "HardSphere") {
+      cout << "  Note: If hard sphere potential is used, all inital pair" << endl;
+      cout << "        energies of adjacent beads will be set to 0" << endl;
+      cout << "        assuming the input coordinates have no overlap!!!" << endl;
+      cout << "        This is to avoid precision-caused overlaps." << endl;
+    }
   }
 
   if (use_ext_pot) {
@@ -214,9 +223,9 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     cout << "        electrostatics calculation to be correct!" << endl;
   }
   
-  ////////////////////////////////////
-  // For pressure & mu calculation. //
-  ////////////////////////////////////
+  //////////////////////////////////////////////////
+  // Init molecular info and prep mu calculation. //
+  //////////////////////////////////////////////////
   mu_tot_ins = 50;
   // Determining the length of the polymer chains. *Assuming that they all have
   // the same length.
@@ -235,7 +244,7 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     gc_deBroglie_prefactor = 1;
     gc_chain_len = chain_len;
     gc_bead_symbol = "P";
-    cbmc_no_of_trials = 10;
+    cbmc_no_of_trials = 30;
   }
 
   // Determine the number of chains, cations and anions for the starting
@@ -256,71 +265,81 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     }
   }
 
+  ////////////////////////////////
+  // Init pressure calculation. //
+  ////////////////////////////////
   // Initializing pressure calculation related variables.
   p_tensor[0] = p_tensor_hs[0] = p_tensor_el[0] = p_tensor_el_tot[0] = 0;
   p_tensor[1] = p_tensor_hs[1] = p_tensor_el[1] = p_tensor_el_tot[1] = 0;
   p_tensor[2] = p_tensor_hs[2] = p_tensor_el[2] = p_tensor_el_tot[2] = 0;
 
-  // chain_len number of sites plus 2 that stands for counterion and coion.
-  vp_g_s = (chain_len+2)*(chain_len+2);
-  vp_hs_res = vp_bead_size*0.01;  // See Chang and Sandler (1993).
-  vp_g_res = vp_bead_size*0.01;
-  vp_hs_bin = 4;                  // See Chang and Sandler (1993).
-  vp_g_bin = 100;  // (int)floor((0.5*box_l[0]-vp_bead_size)/vp_g_res);
-  vp_g_res = (0.5*box_l[0]-vp_bead_size)/vp_g_bin;  // vp_bead_size*0.01;
-  // Four dimensional array. D1 - bin, D2 - xyz, D3 - site1, D4 site2.
-  vp_hs_g = new double[vp_g_bin*3*vp_g_s];
-  vp_hs_rr = new double[vp_hs_bin*3*vp_g_s];
-  vp_zwall_rr = new double[vp_hs_bin];
-  vp_hs_g_lsx = new double[vp_hs_bin];
-  vp_hs_g_lsy = new double[vp_hs_bin];
-  vp_hs_rr_lsx = new double[vp_hs_bin];
-  vp_hs_rr_lsx2 = new double[vp_hs_bin];
-  vp_hs_rr_lsy = new double[vp_hs_bin];
-  for (int i = 0; i < vp_g_bin*3*vp_g_s; i++) {
-    vp_hs_g[i] = 0;
-  }
-  for (int i = 0; i < vp_hs_bin*3*vp_g_s; i++) {
-    vp_hs_rr[i] = 0;
-  }
-  for (int i = 0; i < vp_hs_bin; i++) {
-    vp_zwall_rr[i] = 0;
-    vp_hs_g_lsx[i] = (i+0.5)*vp_g_res + vp_bead_size;
-    vp_hs_rr_lsx[i] = (i+0.5)*vp_hs_res + vp_bead_size;
-    vp_hs_rr_lsx2[i] = (i+0.5)*vp_hs_res + vp_bead_size/2.0;
-  }
-  vp_z = 0;
-
-  if (use_ewald_pot) {
-    vp_el_bin[0] = (int)floor(0.5*box_l[0]/vp_el_res);
-    vp_el_bin[1] = (int)floor(0.5*box_l[1]/vp_el_res);
-    vp_el_bin[2] = (int)floor(0.5*box_l[2]/vp_el_res);
-    // Three dimensional array. D1 - bin, D2 - site1, D3 site2.
-    vp_el_rrx = new double[vp_el_bin[0]*vp_g_s];
-    vp_el_rry = new double[vp_el_bin[1]*vp_g_s];
-    vp_el_rrz = new double[vp_el_bin[2]*vp_g_s];
-    for (int i = 0; i < vp_g_s; i++) {
-      for (int j = 0; j < vp_el_bin[0]; j++) {
-        vp_el_rrx[i*vp_el_bin[0] + j] = 0;
-      }
-      for (int j = 0; j < vp_el_bin[1]; j++) {
-        vp_el_rry[i*vp_el_bin[1] + j] = 0;
-      }
-      for (int j = 0; j < vp_el_bin[2]; j++) {
-        vp_el_rrz[i*vp_el_bin[2] + j] = 0;
-      }
+  if (!use_ext_pot) {
+    // chain_len number of sites plus 2 that stands for counterion and coion.
+    vp_g_s = (chain_len+2)*(chain_len+2);
+    vp_hs_res = vp_bead_size*0.01;  // See Chang and Sandler (1993).
+    vp_g_res = vp_bead_size*0.01;
+    vp_hs_bin = 4;                  // See Chang and Sandler (1993).
+    vp_g_bin = 100;  // (int)floor((0.5*box_l[0]-vp_bead_size)/vp_g_res);
+    vp_g_res = (0.5*box_l[0]-vp_bead_size)/vp_g_bin;  // vp_bead_size*0.01;
+    // Four dimensional array. D1 - bin, D2 - xyz, D3 - site1, D4 site2.
+    vp_hs_g = new double[vp_g_bin*3*vp_g_s];
+    vp_hs_rr = new double[vp_hs_bin*3*vp_g_s];
+    vp_zwall_rr = new double[vp_hs_bin];
+    vp_hs_g_lsx = new double[vp_hs_bin];
+    vp_hs_g_lsy = new double[vp_hs_bin];
+    vp_hs_rr_lsx = new double[vp_hs_bin];
+    vp_hs_rr_lsx2 = new double[vp_hs_bin];
+    vp_hs_rr_lsy = new double[vp_hs_bin];
+    for (int i = 0; i < vp_g_bin*3*vp_g_s; i++) {
+      vp_hs_g[i] = 0;
     }
-    lB = ewald_pot->GetlB();
+    for (int i = 0; i < vp_hs_bin*3*vp_g_s; i++) {
+      vp_hs_rr[i] = 0;
+    }
+    for (int i = 0; i < vp_hs_bin; i++) {
+      vp_zwall_rr[i] = 0;
+      vp_hs_g_lsx[i] = (i+0.5)*vp_g_res + vp_bead_size;
+      vp_hs_rr_lsx[i] = (i+0.5)*vp_hs_res + vp_bead_size;
+      vp_hs_rr_lsx2[i] = (i+0.5)*vp_hs_res + vp_bead_size/2.0;
+    }
+    vp_z = 0;
+  
+    if (use_ewald_pot) {
+      vp_el_bin[0] = (int)floor(0.5*box_l[0]/vp_el_res);
+      vp_el_bin[1] = (int)floor(0.5*box_l[1]/vp_el_res);
+      vp_el_bin[2] = (int)floor(0.5*box_l[2]/vp_el_res);
+      // Three dimensional array. D1 - bin, D2 - site1, D3 site2.
+      vp_el_rrx = new double[vp_el_bin[0]*vp_g_s];
+      vp_el_rry = new double[vp_el_bin[1]*vp_g_s];
+      vp_el_rrz = new double[vp_el_bin[2]*vp_g_s];
+      for (int i = 0; i < vp_g_s; i++) {
+        for (int j = 0; j < vp_el_bin[0]; j++) {
+          vp_el_rrx[i*vp_el_bin[0] + j] = 0;
+        }
+        for (int j = 0; j < vp_el_bin[1]; j++) {
+          vp_el_rry[i*vp_el_bin[1] + j] = 0;
+        }
+        for (int j = 0; j < vp_el_bin[2]; j++) {
+          vp_el_rrz[i*vp_el_bin[2] + j] = 0;
+        }
+      }
+      lB = ewald_pot->GetlB();
+    }
+    else {
+      vp_el_bin[0] = 0;
+      vp_el_bin[1] = 0;
+      vp_el_bin[2] = 0;
+      vp_el_rrx = new double[1];
+      vp_el_rry = new double[1];
+      vp_el_rrz = new double[1];
+      lB = 0;
+    }
   }
+  // Use the pressure calculation routine for slit geometry.
   else {
-    vp_el_bin[0] = 0;
-    vp_el_bin[1] = 0;
-    vp_el_bin[2] = 0;
-    vp_el_rrx = new double[1];
-    vp_el_rry = new double[1];
-    vp_el_rrz = new double[1];
-    lB = 0;
+    InitPressureVirialHSELSlit();
   }
+  // Pressure init end.
 
   InitializeEnergy(mols);
 
@@ -419,7 +438,7 @@ void ForceField::FinalizeEnergies(vector<Molecule>& mols, bool accept,
 // !!! When using mols.size(), need to substract the phantoms out!
 void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
   // Printing the values for g(r) - for code testing only.
-  bool use_g_test = true;
+  bool use_g_test = false;
   // Use g(r) to calculate the electrostatic pressure component. If false, use
   // the direct derivative of the Ewald energy.
   bool use_g_el = true;
@@ -434,23 +453,7 @@ void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
   // Preparation. //
   //////////////////
   // If using GCMC, update the number of chains and ions as they vary.
-  if (use_gc) {
-    n_mol = (int)mols.size();
-    n_chain = 0;
-    n_cion = 0;
-    n_aion = 0;
-    for (int i = 0; i < n_mol; i++) {
-      if (mols[i].Size() > 1) {
-        n_chain++;
-      }
-      else if (mols[i].bds[0].Charge() >= 0) {
-        n_cion++;
-      }
-      else if (mols[i].bds[0].Charge() < 0) {
-        n_aion++;
-      }
-    }
-  }
+  if (use_gc)  UpdateMolCounts(mols);
 
   ///////////////
   // Counting. //
@@ -621,12 +624,14 @@ void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
   }
   delete [] tot;
   // Hard wall. ////////////////////
+  /*
   if (use_ext_pot && ext_pot->PotentialName() == "HardWall") {
     for (int b = 0; b < vp_hs_bin; b++)
       vp_hs_rr_lsy[b] = vp_zwall_rr[b] / (vp_z * vp_hs_res/box_l[2]);
     double f_sig = Interpolate(vp_hs_rr_lsx2, vp_hs_rr_lsy, vp_hs_bin, vp_bead_size/2.0);
     p_tensor_hs[2] += 2*kPi/1.0 * rho * pow(vp_bead_size,3) * f_sig;
   }
+  */
   // Electrostatics. ///////////////
   if (use_g_el) {
     double vp_el_rrx_tot = 0;
@@ -671,6 +676,7 @@ void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
   // Total. ////////
   for (int i = 0; i < 3; i++) {
     p_tensor[i] = 1.0 + p_tensor_hs[i] + p_tensor_el[i];
+    p_tensor[i] *= rho;
   }
 
 }
