@@ -198,13 +198,12 @@ double PotentialEwaldCoul::PairDForceReal(Bead& bead1, Bead& bead2,
         double r = sqrt(r_vec[0]*r_vec[0] +
                         r_vec[1]*r_vec[1] +
                         r_vec[2]*r_vec[2]);
-        // d * r over r^3.
-        double dror3 = (d[0]*r_vec[0] + d[1]*r_vec[1] + d[2]*r_vec[2])/(r*r*r);
-
         if (r > 0 && r <= real_cutoff) {
+          // d * r over r^3.
+          //double dror3 = (d[0]*r_vec[0] + d[1]*r_vec[1] + d[2]*r_vec[2])/(r*r*r);
+          double dror3 = (dist[0]*r_vec[0]+dist[1]*r_vec[1]+dist[2]*r_vec[2])/(r*r*r);
           dforce += -prefactor * dror3 * (erfc(sqrt(alpha)*r) +
                                           2*sqrt(alpha/kPi)*r*exp(-alpha*r*r));
-
         }
       }
     }
@@ -237,7 +236,8 @@ double PotentialEwaldCoul::PairDForceRepl(Bead& bead1, Bead& bead2,
       for (int lz = 0; lz < repl_ceto[2]; lz++) {
         int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
         if (k2[idx] > 0 && k2[idx] <= repl_cutoff) {
-          double dk = d[0]*kx[lx] + d[1]*ky[ly] + d[2]*kz[lz];
+          //double dk = d[0]*kx[lx] + d[1]*ky[ly] + d[2]*kz[lz];
+          double dk = r[0]*kz[lx] + r[1]*kz[ly] +  r[2]*kz[lz];
           dforce += -dk * prefactor * ek2[idx]
                     * sin(kx[lx]*r[0] + ky[ly]*r[1] + kz[lz]*r[2]);
         }

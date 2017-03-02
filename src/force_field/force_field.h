@@ -176,6 +176,7 @@ class ForceField {
       molecular species. The current version cannot calculate the pressure
       components. */
   void CalcPressureVirialHSEL(vector<Molecule>&, double);
+  void CalcPressureVirialEL(vector<Molecule>&);
   /** Get pressure components from their storage array. */
   string GetPressure();
 
@@ -214,6 +215,7 @@ class ForceField {
   double RigidBondLen();
   void CoordinateObeyRigidBond(vector<Molecule>&);
   void SetBoxLen(double []);
+  void UpdateMolCounts(vector<Molecule>&);
 
   /** For debug purposes only. */
   void GetEwaldEnergyComponents(vector<Molecule>&, double *);

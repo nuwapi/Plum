@@ -16,7 +16,7 @@ PotentialEwald::PotentialEwald(string potential_name, double box_l_in[3]) {
     box_l[i] = box_l_in[i];
   }
 
-  calc_pphi = true;
+  calc_pphi = false;
   trial_chain_e = new double [2];
 
 }
@@ -251,7 +251,6 @@ double PotentialEwald::TrialChainEnergy(vector<Molecule>& mols,
       double dipl_E = DipoleE(mols, chain);
       dE += dipl_E - current_dipl_E;
     }
-
   }
   //////////////////
   // If deletion. //
@@ -738,6 +737,36 @@ double PotentialEwald::PUPV(vector<Molecule>& mols, double vol, int npbc) {
   }
 
   return pUpV / (3.0 * vol);
+
+}
+
+double PotentialEwald::RDotF(vector<Molecule>& mols, double vol, int npbc) {
+  double r_dot_f_zz = 0;
+  
+  for (int i = 0; i < (int)mols.size(); i++) {
+    int i_s = mols[i].Size();
+    for (int j = i; j < (int)mols.size(); j++) {
+      int j_s = mols[j].Size();
+      for (int k = 0; k < i_s; k++) {
+        for (int l = 0; l < j_s; l++) {
+          if ((j == i && l >= k) || (j > i)) {
+            int id1 = mols[i].bds[k].ID();
+            int id2 = mols[j].bds[l].ID();
+            pair<int,int> indices = make_pair(id1, id2);
+            double pphi_r = current_real_pphi_map[indices];
+            double pphi_k = current_repl_pphi_map[indices];
+            if (j == i && l == k) {
+              pphi_r = 0;
+              pphi_k = 0;
+            } 
+            r_dot_f_zz += - pphi_r - pphi_k;
+          } 
+        } 
+      } 
+    } 
+  } 
+
+  return r_dot_f_zz;
 
 }
 

@@ -79,6 +79,7 @@ class PotentialEwald {
   virtual double DipoleE(vector<Molecule>&, int, int) = 0;
   // Partial U partial V.
   double PUPV(vector<Molecule>&, double, int);
+  double RDotF(vector<Molecule>&, double, int);
 
   /** Set energy between a specific pair in the designated energy maps.\n
       Input arguments:\n

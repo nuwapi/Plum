@@ -298,6 +298,7 @@ void Simulation::TranslationalMove() {
           break;
         }
       }
+
       switch (move_type) {
         case 1:
           mols[mol_id].COMTranslate(move_size, rand_gen);
@@ -773,6 +774,7 @@ void Simulation::Sample() {
     // Pressure //
     //////////////
     force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
+    //force_field.CalcPressureVirialEL(mols);
     ////////////////////////
     // Chemical potential //
     ////////////////////////
