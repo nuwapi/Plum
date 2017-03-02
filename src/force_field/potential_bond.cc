@@ -66,7 +66,7 @@ double PotentialBond::GetE(int flag, int index) {
 
 }
  
-void PotentialBond::UpdateEnergy(int active_mol, bool accepted) {
+void PotentialBond::FinalizeEnergy(int active_mol, bool accepted) {
   if (accepted) {
     current_energy_array[active_mol] = trial_energy_array[active_mol]; 
     E_tot += dE; 
@@ -74,6 +74,7 @@ void PotentialBond::UpdateEnergy(int active_mol, bool accepted) {
   else {
     trial_energy_array[active_mol] = current_energy_array[active_mol]; 
   }
+
   // Energy difference has now been processed.
   dE = 0;
 

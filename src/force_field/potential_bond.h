@@ -37,7 +37,7 @@ class PotentialBond{
   void AdjustEnergyUponMolDeletion(int);  // delete stored energies for a molecule being deleted 
   void SetE(int, int, double);  // same array, index, value args 
   double GetE(int, int);
-  void UpdateEnergy(int, bool); 
+  void FinalizeEnergy(int, bool); 
   double GetTotalEnergy(); 
   string PotentialName();
 
@@ -45,7 +45,9 @@ class PotentialBond{
   virtual double EnergyDifference(vector<Molecule>&, double[], int, int) = 0; 
   virtual void ReadParameters() = 0;
   virtual double RandomBondLen(double, mt19937&) = 0; //for growing mols for gc insertion
-  double CalcTrialTotalEnergy(vector < Molecule >&, double[], int); //for use in pressure calculation 
+  /** Returning the equilibrium bond length. */
+  virtual double EqBondLen() = 0;
+  double CalcTrialTotalEnergy(vector<Molecule>&, double[], int); //for use in pressure calculation 
 
 }; 
 

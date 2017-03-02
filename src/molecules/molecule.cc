@@ -150,7 +150,8 @@ void Molecule::COMTranslate(double move_size, mt19937& rand_gen) {
 
 }
 
-void Molecule::Pivot(double move_size, mt19937& rand_gen, double rigid_bond) {
+void Molecule::Pivot(double move_size, mt19937& rand_gen, double eq_bond_len,
+                     bool vary_bond) {
   // Choose the pivot bead.
   int pivot = floor(len * (double)rand_gen()/rand_gen.max());
   if (pivot == len)  pivot--;
@@ -171,7 +172,13 @@ void Molecule::Pivot(double move_size, mt19937& rand_gen, double rigid_bond) {
     double distx = x - bds[i-1].GetCrd(1, 0);
     double disty = y - bds[i-1].GetCrd(1, 1);
     double distz = z - bds[i-1].GetCrd(1, 2);
-    double norm = rigid_bond / sqrt(distx*distx + disty*disty + distz*distz);
+    // Decide bond length.
+    double bond_len = eq_bond_len;
+    if (vary_bond) {
+      // Vary bond up to +/- 10%.
+      bond_len += (eq_bond_len/5.0)*((double)rand_gen()/rand_gen.max()-0.5);
+    }
+    double norm = bond_len / sqrt(distx*distx + disty*disty + distz*distz);
     // This is the new center.
     double cx = norm*distx + bds[i-1].GetCrd(1, 0);
     double cy = norm*disty + bds[i-1].GetCrd(1, 1);
@@ -198,7 +205,13 @@ void Molecule::Pivot(double move_size, mt19937& rand_gen, double rigid_bond) {
     double distx = x - bds[i+1].GetCrd(1, 0);
     double disty = y - bds[i+1].GetCrd(1, 1);
     double distz = z - bds[i+1].GetCrd(1, 2);
-    double norm = rigid_bond / sqrt(distx*distx + disty*disty + distz*distz);
+    // Decide bond length.
+    double bond_len = eq_bond_len;
+    if (vary_bond) {
+      // Vary bond up to +/- 10%.
+      bond_len += (eq_bond_len/5.0)*((double)rand_gen()/rand_gen.max()-0.5);
+    }
+    double norm = bond_len / sqrt(distx*distx + disty*disty + distz*distz);
     // This is the new center.
     double cx = norm*distx + bds[i+1].GetCrd(1, 0);
     double cy = norm*disty + bds[i+1].GetCrd(1, 1);
@@ -250,12 +263,20 @@ void Molecule::Crankshaft(double move_size, mt19937& rand_gen) {
   
 }
 
-void Molecule::RandomReptation(mt19937& rand_gen, double rigid_bond) {
-  if (rigid_bond < 0) {
+void Molecule::RandomReptation(mt19937& rand_gen, double eq_bond_len,
+                               bool vary_bond) {
+  if (eq_bond_len < 0) {
     cout << "Rigid bond is not properly defined. The current reptation move "
          << "only supports freely joined hard sphere chains. "
          << "Exiting! Program complete." << endl;
     exit(1);
+  }
+
+  // Decide bond length.
+  double bond_len = eq_bond_len;
+  if (vary_bond) {
+    // Vary bond up to +/- 10%.
+    bond_len += (eq_bond_len/5.0)*((double)rand_gen()/rand_gen.max()-0.5);
   }
 
   // Forward direction.
@@ -277,9 +298,9 @@ void Molecule::RandomReptation(mt19937& rand_gen, double rigid_bond) {
 
   double vec[3];
   randSphere(vec, rand_gen);
+  double vec_len = sqrt(vec[0]*vec[0]+vec[1]*vec[1]+vec[2]*vec[2]);
   for (int i = 0; i < 3; i++) {
-    vec[i] *= (rigid_bond);
-    bds[end].SetCrd(1, i, bds[end].GetCrd(0, i)+vec[i]);
+    bds[end].SetCrd(1, i, bds[end].GetCrd(0, i) + bond_len*vec[i]/vec_len);
   }
 
 

@@ -288,6 +288,7 @@ class ForceField {
   void CoordinateObeyRigidBond(vector<Molecule>&);
   void SetBoxLen(double []);
   void UpdateMolCounts(vector<Molecule>&);
+  double EqBondLen();
 
   /** For debug purposes only. */
   void GetEwaldEnergyComponents(vector<Molecule>&, double *);

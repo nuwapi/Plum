@@ -282,18 +282,30 @@ void Simulation::TranslationalMove() {
     // If choose to move a chain and there is one.
     else if (grafted + n_chain > 0) {
       mol_id = chain_id;
+
+      // Decide bond length.
+      double bond_len = 0;
+      bool vary_bond = false;
+      if (force_field.UseBondRigid())
+        bond_len = force_field.RigidBondLen();
+      // Overwrite rigid bond if bond potential is used.
+      if (force_field.UseBondPot()) {
+        bond_len = force_field.EqBondLen();
+        vary_bond = true;
+      }
+
       switch (move_type) {
         case 1:
           mols[mol_id].COMTranslate(move_size, rand_gen);
           break;
-        case 2:
-          mols[mol_id].Pivot(move_size, rand_gen, force_field.RigidBondLen());
+        case 2: 
+          mols[mol_id].Pivot(move_size, rand_gen, bond_len, vary_bond);
           break;
         case 3:
           mols[mol_id].Crankshaft(move_size, rand_gen);
           break;
         case 4:
-          mols[mol_id].RandomReptation(rand_gen, force_field.RigidBondLen());
+          mols[mol_id].RandomReptation(rand_gen, bond_len, vary_bond);
           break;
       }
     }

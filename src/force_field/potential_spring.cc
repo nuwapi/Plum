@@ -21,6 +21,7 @@ void PotentialSpring::ReadParameters() {
 
 double PotentialSpring::MoleculeEnergy(Molecule& mol, double box_l[],
                                        int npbc) {
+  /* The old bond energy routine.
   double bond_energy = 0; 
   for (int i = 0; i < mol.NBond(); i++) {
     // Indices of the two beads forming the bond.
@@ -31,6 +32,16 @@ double PotentialSpring::MoleculeEnergy(Molecule& mol, double box_l[],
     double r = mol.bds[ind1].BBDist(mol.bds[ind2], box_l, 0);
     bond_energy += 0.5 * m_kBond * (r - m_r0) * (r - m_r0); 
   }
+  return bond_energy;
+  */
+
+  // The new bond energy routine, assuming linear molecules!!!
+  double bond_energy = 0;
+  for (int i = 0; i < mol.Size()-1; i++) {
+    double r = mol.bds[i].BBDist(mol.bds[i+1], box_l, 0);
+    bond_energy += 0.5 * m_kBond * (r - m_r0) * (r - m_r0);
+  }
+
   return bond_energy;
 
 }
@@ -65,6 +76,11 @@ double PotentialSpring::EnergyDifference(vector<Molecule>& mols,
   }
 
   return 0;
+
+}
+
+double PotentialSpring::EqBondLen() {
+  return m_r0;
 
 }
 
