@@ -57,13 +57,13 @@ class Molecule {
       Now it also can choose to rotate either the left or right part of the
       chain. [9/28/2016].\n
       The current pivot algorithm does not require rigid bond to use.  */
-  void Pivot(double delta, std::mt19937&, double);
+  void Pivot(double delta, std::mt19937&, double, bool);
   /** Basically (Rachel's original) pivot for an internal section of the
       molecule. */
   void Crankshaft(double delta, std::mt19937&); 
   /** Unbiased reptation in both forward and backward direcitons. Currently,
       the routine has to be used with the "rigid bond" setting. */
-  void RandomReptation(std::mt19937&, double);
+  void RandomReptation(std::mt19937&, double, bool);
 
 }; 
 

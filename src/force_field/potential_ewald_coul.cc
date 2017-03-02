@@ -325,13 +325,13 @@ double PotentialEwaldCoul::PairDForceReal(Bead& bead1, Bead& bead2,
   double dist[3];
   double dist1r[3];
   double dist2r[3];
-  double d[3];
+  // double d[3];
   GetDistVector(bead2, bead1, box_l, npbc, dist);
   GetDistVector(bead1_ref, bead1, box_l, 0, dist1r);
   GetDistVector(bead2_ref, bead2, box_l, 0, dist2r);
-  for (int i = 0; i < 3; i++) {
-    d[i] = dist1r[i] - dist2r[i];
-  }
+  // for (int i = 0; i < 3; i++) {
+  //   d[i] = dist1r[i] - dist2r[i];
+  // }
 
   double q1 = bead1.Charge();
   double q2 = bead2.Charge();
@@ -369,13 +369,13 @@ double PotentialEwaldCoul::PairDForceRepl(Bead& bead1, Bead& bead2,
   double r[3];
   double dist1r[3];
   double dist2r[3];
-  double d[3];
+  // double d[3];
   GetDistVector(bead2, bead1, box_l, npbc, r);
   GetDistVector(bead1_ref, bead1, box_l, 0, dist1r);
   GetDistVector(bead2_ref, bead2, box_l, 0, dist2r);
-  for (int i = 0; i < 3; i++) {
-    d[i] = dist1r[i] - dist2r[i];
-  }
+  // for (int i = 0; i < 3; i++) {
+  //   d[i] = dist1r[i] - dist2r[i];
+  // }
   double q1 = bead1.Charge();
   double q2 = bead2.Charge();
   double prefactor = lB * q1*q2/(kPi*box_vol) * (4*kPi*kPi);

@@ -442,7 +442,7 @@ void ForceField::FinalizeEnergies(vector<Molecule>& mols, bool accept,
     ewald_pot->FinalizeEnergyBothMaps(mols, moved_mol, accept);
   }
   if (use_bond_pot) {
-    bond_pot->UpdateEnergy(moved_mol, accept);
+    bond_pot->FinalizeEnergy(moved_mol, accept);
   }
   if (use_ext_pot) {
     ext_pot->FinalizeEnergyBothMaps(mols, moved_mol, accept);
@@ -729,6 +729,7 @@ string ForceField::GetPressure() {
       foo << "el" << i << "_" << j << " " << p_tensor3[index] << " ";
     }
   }
+  foo << "bn " << p_tensor2[17] << " ";
   foo << "dp " << p_tensor2[18] << " ";
   foo << "id " << p_tensor2[19] << " ";
  
@@ -1303,6 +1304,18 @@ void ForceField::UpdateMolCounts(vector<Molecule>& mols) {
 
   n_chain -= grafted;
 
+}
+
+double ForceField::EqBondLen() {
+  if (use_bond_pot)
+    return bond_pot->EqBondLen();
+  else {
+    cout << "  Illegal request of bond length! Exiting. Program complete." 
+         << endl;
+    exit(1);
+  }
+
+  return 0;
 }
 
 

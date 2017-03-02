@@ -26,6 +26,7 @@ class PotentialSpring: public PotentialBond {
   double MoleculeEnergy(Molecule&, double[], int);
   double RandomBondLen(double, mt19937&); 
   double EnergyDifference(vector < Molecule >&, double[], int, int);
+  double EqBondLen();
 
 };
 
