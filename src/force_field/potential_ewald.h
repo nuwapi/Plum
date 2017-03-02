@@ -68,6 +68,7 @@ class PotentialEwald {
   // Part 1.
   /** Get real space pair energy. */
   virtual double PairEnergyReal(Bead&, Bead&, int) = 0;
+virtual double PairEnergyRealA(Bead&, Bead&, int) = 0;
   /** Get reciprocal space pair energy. */
   virtual double PairEnergyRepl(Bead&, Bead&, int) = 0;
   virtual double PairEnergyRealForP(Bead&, Bead&, int) = 0;

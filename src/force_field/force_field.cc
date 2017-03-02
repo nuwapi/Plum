@@ -1163,9 +1163,13 @@ void ForceField::CoordinateObeyRigidBond(vector<Molecule>& mols) {
 double ForceField::EnsureGrafting(vector<Molecule>& mols, int mol_id) {
   for (int i = 0; i < mols[mol_id].Size(); i++) {
     if (mols[mol_id].bds[i].Symbol() == "L" &&
+        abs(mols[mol_id].bds[i].GetCrd(1, 0) - 0) > rigid_bond &&
+        abs(mols[mol_id].bds[i].GetCrd(1, 1) - 0) > rigid_bond &&
         abs(mols[mol_id].bds[i].GetCrd(1, 2) - 0) > rigid_bond)
       return kVeryLargeEnergy;
-    else if (mols[mol_id].bds[i].Symbol() == "R" && 
+    else if (mols[mol_id].bds[i].Symbol() == "R" &&
+             abs(mols[mol_id].bds[i].GetCrd(1, 0) - 0) > rigid_bond &&
+             abs(mols[mol_id].bds[i].GetCrd(1, 1) - 0) > rigid_bond &&
              abs(mols[mol_id].bds[i].GetCrd(1, 2) - box_l[2]) > rigid_bond)
       return kVeryLargeEnergy;
   }
@@ -1249,6 +1253,23 @@ double ForceField::RigidBondLen() {
 }
 
 void ForceField::GetEwaldEnergyComponents(vector<Molecule>& mols, double *out) {
+  /* Print cation-cation etc components for a small ion system.
+  double cc = 0;
+  double aa = 0;
+  double ca = 0;
+  for (int i = 0; i < (int)mols.size(); i++) {
+    for (int j = i; j < (int)mols.size(); j++) {
+      if (mols[i].bds[0].Charge() > 0 && mols[j].bds[0].Charge() > 0)
+        cc += ewald_pot->GetERealRepl(0, mols[i].bds[0].ID(), mols[j].bds[0].ID()); 
+      if (mols[i].bds[0].Charge() < 0 && mols[j].bds[0].Charge() < 0)
+        aa += ewald_pot->GetERealRepl(0, mols[i].bds[0].ID(), mols[j].bds[0].ID());
+      if (mols[i].bds[0].Charge() != mols[j].bds[0].Charge())
+        ca += ewald_pot->GetERealRepl(0, mols[i].bds[0].ID(), mols[j].bds[0].ID());
+    }
+  }
+  cout << cc << " " << aa << " " << ca << " " << cc+aa+ca << endl;
+  */
+
   ewald_pot->UpdateEnergyComponents(mols, npbc);
   out[0] = ewald_pot->GetRealEnergy();
   out[1] = ewald_pot->GetReplEnergy();

@@ -306,7 +306,7 @@ void Simulation::TranslationalMove() {
       attempted[move_type]++;
 
       // Assign kVeryLargeEnergy if the polymer leaves the z surfaces.
-      dE = force_field.EnsureGrafting(mols, mol_id);
+      // dE = force_field.EnsureGrafting(mols, mol_id);
       // Only calculate energy difference if grafting is ensured.
       if (dE < kVeryLargeEnergy)
         dE = force_field.EnergyDifference(mols, mol_id);
@@ -745,12 +745,12 @@ void Simulation::Sample() {
     //////////////
 
     if (force_field.UseExtPot() && step % (sample_freq*10) == 0) {
-    //  force_field.CalcPressureVolScalingHSELSlit(mols);
+      force_field.CalcPressureVolScalingHSELSlit(mols);
       //force_field.CalcPressureVirialHSELSlit(mols, density_cumu/ff_avg_counter);
       //force_field.CalcPressureForceELSlit(mols);
     }
     else if (step % (sample_freq*10) == 0) {
-    //  force_field.CalcPressureVolScalingHSELSlit(mols);
+      force_field.CalcPressureVolScalingHSELSlit(mols);
       //force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
       //force_field.CalcPressureVirialEL(mols);
     }

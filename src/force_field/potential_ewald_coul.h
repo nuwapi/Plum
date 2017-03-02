@@ -57,6 +57,7 @@ class PotentialEwaldCoul : public PotentialEwald {
   // Energy functions.
   /** Energy between two beads. */
   double PairEnergyReal(Bead&, Bead&, int);   
+double PairEnergyRealA(Bead&, Bead&, int);
   double PairEnergyRepl(Bead&, Bead&, int);
   double PairEnergyRealForP(Bead&, Bead&, int);
   double PairEnergyReplForP(Bead&, Bead&, int);

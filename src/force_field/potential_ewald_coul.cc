@@ -41,11 +41,15 @@ void PotentialEwaldCoul::ReadParameters() {
   // Determining box size for Ewald, which may not be the same as the rest
   // of the simulation.
   if (dipole_correction) {
-    box_l[2] = box_l[2]*kDiCorrection;  // Why 3-5 times? See Frenkel and Smit.
+    double min_padding = 150;  // 150A is arbitrary right now.
+    if (box_l[2]*kDiCorrection > min_padding)
+      box_l[2] = box_l[2]*kDiCorrection;  // Why 3-5 times? See Frenkel and Smit.
+    else
+      box_l[2] += min_padding;
   }
   box_vol = box_l[0]*box_l[1]*box_l[2];
   if (dipole_correction)
-    box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+kDiCorrection*kDz);
+    box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+kDz);
   else
     box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+kDz);
   // Automatically decide real space cutoff. Using unit charge as a criteria.
@@ -61,7 +65,7 @@ void PotentialEwaldCoul::ReadParameters() {
   // Automaticall decide reciprocal space cutoff.
   repl_cutoff = alpha;
   // In case the boxes are not symmetric with a long z direction.
-  double min_box_vol = pow(box_l[0], 2);
+  double min_box_vol = pow(box_l[0], 3);
   while (lB*1*1/(2*kPi*min_box_vol) * (4*kPi*kPi) * exp(-repl_cutoff/(4*alpha))
          / repl_cutoff > kEwaldCutoff) {
     repl_cutoff += alpha;
@@ -91,7 +95,7 @@ void PotentialEwaldCoul::ReadParameters() {
   for (int lz = -repl_cell[2]; lz <= repl_cell[2]; lz++) {
     kz[lz+repl_cell[2]] = lz * 2*kPi / box_l[2];
     if (dipole_correction)
-      kz_forP[lz+repl_cell[2]] = lz * 2*kPi / (box_l[2] + kDiCorrection*kDz);
+      kz_forP[lz+repl_cell[2]] = lz * 2*kPi / (box_l[2] + kDz);
     else
       kz_forP[lz+repl_cell[2]] = lz * 2*kPi / (box_l[2] + kDz);
   }
@@ -155,6 +159,11 @@ double PotentialEwaldCoul::PairEnergyReal(Bead& bead1, Bead& bead2, int npbc) {
 
 }
 
+double PotentialEwaldCoul::PairEnergyRealA(Bead& bead1, Bead& bead2, int npbc) {
+  return 0;
+
+}
+
 // PairEnergyReal for scaled volume.
 double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc) {
   double energy = 0;
@@ -172,7 +181,7 @@ double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc
         r_vec[0] = dist[0] + i*box_l[0];
         r_vec[1] = dist[1] + j*box_l[1];
         if (dipole_correction)
-          r_vec[2] = dist[2] + k*(box_l[2]+kDiCorrection*kDz);
+          r_vec[2] = dist[2] + k*(box_l[2]+kDz);
         else
           r_vec[2] = dist[2] + k*(box_l[2]+kDz);
         double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
@@ -239,6 +248,7 @@ double PotentialEwaldCoul::PairEnergyReplForP(Bead& bead1, Bead& bead2, int npbc
   return energy;
 
 }
+
 double PotentialEwaldCoul::SelfEnergy(Bead& bead) {
   double q = bead.Charge();
   return -lB*sqrt(alpha/kPi)*q*q;
@@ -302,7 +312,7 @@ double PotentialEwaldCoul::PairForceZRepl(Bead& bead1, Bead& bead2, int npbc) {
 
 // [[[Note]]]: This function should only be used on the point charges on wall z=0!!!
 double PotentialEwaldCoul::ForceZDipole(Bead& bead, double dipole_z) {
-  return -lB * 4*kPi*bead.Charge()*dipole_z/box_vol;
+  return -lB * 4*kPi*bead.Charge()*dipole_z/(box_vol/1.0);
 
 }
 
@@ -400,7 +410,7 @@ double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols) {
       Mz += c*z;
     }
   }
-  return lB * 2*kPi/box_vol * Mz * Mz;
+  return lB * 2*kPi/(box_vol/1.0) * Mz * Mz;
 
 }
 
@@ -422,7 +432,7 @@ double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols,
     Mz += c*z;
   }
 
-  return lB * 2*kPi/box_vol * Mz * Mz;
+  return lB * 2*kPi/(box_vol/1.0) * Mz * Mz;
 
 }
 
@@ -442,7 +452,7 @@ double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols, int delete_id,
       }
     }
   }
-  return lB * 2*kPi/box_vol * Mz * Mz;
+  return lB * 2*kPi/(box_vol/1.0) * Mz * Mz;
 
 }
 
@@ -502,7 +512,7 @@ double PotentialEwaldCoul::DipoleEDiff(vector<Molecule>& mols,
     Mz_n += c*z;
   }
 
-  return lB * 2*kPi/box_vol * (Mz_n*Mz_n - Mz_o*Mz_o);
+  return lB * 2*kPi/(box_vol/1.0) * (Mz_n*Mz_n - Mz_o*Mz_o);
 
 }
 

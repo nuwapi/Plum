@@ -151,82 +151,13 @@ void Molecule::COMTranslate(double move_size, mt19937& rand_gen) {
 }
 
 void Molecule::Pivot(double move_size, mt19937& rand_gen, double rigid_bond) {
-  /*
-  // Choose to rotate the left part or the right part of the chain wrt pivot.
-  // Rotate the right part by default.
-  int direction = 1;
-  // Rotate left part.
-  if (rand_gen() % 2 == 0) {
-    direction = -1;
-  }
-  // Cannot pivot from first bead (need bond vector) and useless to pivot from
-  // last.
-  int pivot_bead = floor((len - 2) * (double)rand_gen()/rand_gen.max() + 1);
-  if (pivot_bead == len-1)  pivot_bead--;
-
-  // The angle to rotate along the rotating bond.
-  double angle = 0.5 * ((double)rand_gen()/rand_gen.max() * 2 * M_PI - M_PI); 
-  int i_start, i_end;
-  if (direction == -1) { 
-    i_start = pivot_bead - 1;
-    i_end = -1;
-  } else {
-    i_start = pivot_bead + 1;
-    i_end = len;
-  }
-
-  Vector3d rotating_bond;
-  for (int i = 0; i < 3; i++) {
-    rotating_bond(i) = bds[pivot_bead          ].GetCrd(0,i) -
-                       bds[pivot_bead-direction].GetCrd(0,i) +
-                       10.0*rigid_bond*(double)rand_gen()/rand_gen.max();
-                       // Add a randomness of X% of the bond length.
-                       // Here X = 10*100%.
-  }
-  rotating_bond.normalize();
-  AngleAxisd angle_axis = AngleAxisd(angle, rotating_bond);
-  Matrix3d rotation_matrix;
-  rotation_matrix = angle_axis.toRotationMatrix();
-
-  for (int i = i_start; i != i_end; i+=direction) {
-    bds[i].SetMoved();
-    // Put coords into eigen vector object.
-    Vector3d current_bead_vec;
-    // And translate them so that the pivot point is the origin.
-    for (int k = 0; k < 3; k++) {
-      current_bead_vec(k) = bds[i].GetCrd(0,k) -
-                            bds[pivot_bead].GetCrd(0,k);
-    }
-    // Do rotation & put them back.
-    current_bead_vec = rotation_matrix * current_bead_vec;
-    for (int k = 0; k < 3; k++) {
-      bds[i].SetCrd(1, k, current_bead_vec(k)+bds[pivot_bead].GetCrd(0,k));
-    }
-  }
-  // If rigid bond is used.
-  if (rigid_bond > 0) {
-    for (int i = i_start; i != i_end; i+=direction) {
-      Vector3d this_bond_vec;
-      for (int j = 0; j < 3; j++) {
-        this_bond_vec(j) = bds[i          ].GetCrd(1,j) -
-                           bds[i-direction].GetCrd(1,j);
-      }
-      this_bond_vec.normalize();
-      for (int j = 0; j < 3; j++) {
-        this_bond_vec(j) *= (rigid_bond);
-        // This changed the bead coordinate for the next bead, but the error
-        // should be small enough to matter. A better way is to save the trial
-        // position into a "trial trail position".
-        bds[i].SetCrd(1, j, this_bond_vec(j)+bds[i-direction].GetCrd(1,j));
-      }
-    }
-  }
-  */
-
-  // New pivot algorithm.
   // Choose the pivot bead.
   int pivot = floor(len * (double)rand_gen()/rand_gen.max());
   if (pivot == len)  pivot--;
+  // This if for grafted polymers.
+  if (bds[0].Symbol() == "R" || bds[0].Symbol() == "L")
+    pivot = 0;
+
   // Determine the move size.
   double move_size_rand = move_size * (double)rand_gen()/rand_gen.max();
 

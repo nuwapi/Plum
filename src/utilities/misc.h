@@ -17,6 +17,9 @@ double getDist(Bead*, Bead*, double[], int);
 void GetDistVector(Bead&, Bead&, double[], int, double (&)[3]);
 /** Same function using the current position. */
 void GetDistVectorC(Bead&, Bead&, double[], int, double (&)[3]);
+/** Move all atoms to the positive central cell and do NOT apply minimum
+    image convention. */
+void GetDistVectorConsistent(Bead&, Bead&, double[], int, double (&)[3]);
 /** Fills in a vector with random point on unit sphere. */
 void randSphere(double[], std::mt19937&);
 /** Returns rand deviate from gaussian distribution with mean 0 and stdev 1.

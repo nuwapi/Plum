@@ -64,6 +64,19 @@ void GetDistVector(Bead& b1, Bead& b2, double box_l[], int npbc,
 
 }
 
+void GetDistVectorConsistent(Bead& b1, Bead& b2, double box_l[], int npbc,
+                             double (&dist)[3]) {
+
+  double xyz1[3] = {b1.GetCrd(1, 0), b1.GetCrd(1, 1), b1.GetCrd(1, 2)};
+  double xyz2[3] = {b2.GetCrd(1, 0), b2.GetCrd(1, 1), b2.GetCrd(1, 2)};
+  for (int i = 0; i < 3; i++) {
+    xyz1[i] -= box_l[i] * floor(xyz1[i] / box_l[i]);
+    xyz2[i] -= box_l[i] * floor(xyz2[i] / box_l[i]);
+    dist[i] = xyz2[i] - xyz1[i];
+  }
+
+}
+
 void GetDistVectorC(Bead& b1, Bead& b2, double box_l[], int npbc,
                     double (&dist)[3]) {
   // Vector pointing from Bead1 to Bead2.

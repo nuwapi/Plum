@@ -267,39 +267,16 @@ void ForceField::CalcPressureForceELSlit(vector<Molecule>& mols) {
  * p_tensor_hs[i*4+j]: the cumulative Yethiraj LJ part of the pair ij.
  */
 void ForceField::CalcPressureVolScalingHSELSlit(vector<Molecule>& mols) {
-/*
-///////////////////////////////////
-mols[0].bds[0].SetCrd(1, 0, 0);
-mols[0].bds[0].SetCrd(1, 1, 0);
-mols[0].bds[0].SetCrd(1, 2, 0);
-mols[1].bds[0].SetCrd(1, 0, 0);
-mols[1].bds[0].SetCrd(1, 1, 0);
-mols[1].bds[0].SetCrd(1, 2, 2.5);
-for (int i=0; i<10; i+=1) {
-mols[1].bds[0].SetCrd(1, 2, 2.5+i);
-double aaa1 = ewald_pot->PairEnergyReal(mols[0].bds[0], mols[1].bds[0], npbc);
-double aaa2 = ewald_pot->PairEnergyRepl(mols[0].bds[0], mols[1].bds[0], npbc);
-cout << 2.5+i << " " << aaa1 << " " << aaa2 << " " << aaa1+aaa2 << endl;
-}
-cout<< "" << endl;
-for (int i=0; i<10; i+=1) {
-mols[1].bds[0].SetCrd(1, 2, 2.5+i);
-double aaa1 = ewald_pot->PairEnergyRealForP(mols[0].bds[0], mols[1].bds[0], npbc);
-double aaa2 = ewald_pot->PairEnergyReplForP(mols[0].bds[0], mols[1].bds[0], npbc);
-cout << 2.5+i << " " << aaa1 << " " << aaa2 << " " << aaa1+aaa2 << endl;
-}
-cout<< "\n\n\n\n\n" << endl;
-///////////////////////////////////
-*/
-
-
+  /////////////////////////////////////////
+  // 1. Preparation.
+  /////////////////////////////////////////
   vp_z++;
   double dU = 0;
   double oldE = 0;
   double newE = 0;
   double box_l_scaled[3] = {box_l[0], box_l[1], box_l[2]+kDz};
   double dz = kDz;
-  if (use_ewald_pot && use_ext_pot)  dz = kDz*kDiCorrection;
+  //if (use_ewald_pot && use_ext_pot)  dz = kDz*kDiCorrection;
 
   double * d_com_z;
   if (n_mol != 0)
@@ -307,7 +284,9 @@ cout<< "\n\n\n\n\n" << endl;
   else
     d_com_z = new double[1];
 
-  // Calculate COMs.
+  /////////////////////////////////////////
+  // 2. Calculate displacements.
+  /////////////////////////////////////////
   for (int i = 0; i < n_mol; i++) {
     // Calculate the center of mass position along z axis.
     double com_z = 0;
@@ -317,6 +296,11 @@ cout<< "\n\n\n\n\n" << endl;
     com_z /= mols[i].Size();
     // Find out how much the com should move.
     d_com_z[i] = kDz * (com_z / box_l[2]);
+    // For grafted polymers.
+    if (mols[i].bds[0].Symbol() == "R")
+      d_com_z[i] = kDz;
+    else if (mols[i].bds[0].Symbol() == "L")
+      d_com_z[i] = 0;
   }
   /*
   // If a counter ion is condensed on a polymer, move it the same amount as the
@@ -335,6 +319,9 @@ cout<< "\n\n\n\n\n" << endl;
   }
   */
 
+  /////////////////////////////////////////
+  // 3. Calculate all dU components.
+  /////////////////////////////////////////
   for (int i = 0; i < n_mol; i++) {
     int id_i;
     if (i < phantom)                        id_i = 3;  // Surface.
@@ -373,6 +360,24 @@ cout<< "\n\n\n\n\n" << endl;
               newE += ewald_pot->PairEnergyReplForP(mols[i].bds[j], mols[k].bds[l], npbc);
               dU += newE - oldE;
               p_tensor_el[index] += newE - oldE;
+/*
+if (id_i == 0 && id_k == 0) {
+double nowd = mols[i].bds[j].BBDist(mols[k].bds[l], box_l_scaled, npbc);
+double orid = mols[i].bds[j].BBDistC(mols[k].bds[l], box_l_scaled, npbc);
+double ko = ewald_pot->GetERepl(0, index1, index2);
+double kn = ewald_pot->PairEnergyReplForP(mols[i].bds[j], mols[k].bds[l], npbc);
+ewald_pot->PairEnergyRealA(mols[i].bds[j], mols[k].bds[l], npbc);
+cout.precision(17);
+double dO[3];
+double dN[3];
+GetDistVectorC(mols[i].bds[j], mols[k].bds[l], box_l_scaled, npbc, dO);
+GetDistVector(mols[i].bds[j], mols[k].bds[l], box_l_scaled, npbc, dN);
+cout << nowd - orid << " "
+     << dO[0] << " " << dO[1] << " " << dO[2] << " "
+     << dN[0] << " " << dN[1] << " " << dN[2] << " "
+     << kn-ko << endl;
+}
+*/
             }
             if (use_pair_pot && i >= phantom && k >= phantom) {
               oldE = pair_pot->GetE(0, index1, index2);
@@ -424,10 +429,12 @@ cout<< "\n\n\n\n\n" << endl;
     p_tensor[4] += d_di;
   }
 
-  // Calculate de Miguel.
+  // de Miguel.
   p_tensor[3] += pow(1.0+dz/box_l[2], n_mol-phantom)*exp(-beta*dU);
 
-  // *** Calculate average from cumulations. ***
+  /////////////////////////////////////////
+  // 4. Compile results and calculate pressure.
+  /////////////////////////////////////////
   // Yethiraj.
   p_tensor[0] = 0;
   for (int i = 0; i < 4; i++) {
@@ -436,9 +443,7 @@ cout<< "\n\n\n\n\n" << endl;
       p_tensor[0] += p_tensor_el[index] + p_tensor_hs[index];
     }
   }
-
   p_tensor[0] += p_tensor[4];
-
   p_tensor[0] /= (box_l[0]*box_l[1]*dz);
   p_tensor[0] = (beta*p_tensor[2] - p_tensor[0])/vp_z;
 
@@ -457,38 +462,8 @@ cout<< "\n\n\n\n\n" << endl;
   // de Miguel.
   p_tensor[1] = beta/(box_l[0]*box_l[1]*dz)*log(p_tensor[3]/vp_z);
 
-
-/*/////////////////////////////////////////
-//cout << n_mol << endl;
-for (int i = 0; i < n_mol; i++) {
-  for (int j = 0; j < mols[i].Size(); j++) {
-    for (int k = 0; k < n_mol; k++) {
-      for (int l = 0; l < mols[k].Size(); l++) {
-        int index1 = min(mols[i].bds[j].ID(), mols[k].bds[l].ID());
-        int index2 = max(mols[i].bds[j].ID(), mols[k].bds[l].ID());
-        double cu = ewald_pot->GetERealRepl(0, index1, index2);
-        double tr = ewald_pot->GetERealRepl(1, index1, index2);
-        if (cu != tr || abs(cu) > 100 || abs(tr) > 100)
-          cout << "EW " << cu << " " << tr << endl;
-        if (i!=j || k!=l) {
-          cu = pair_pot->GetE(0, index1, index2);
-          tr = pair_pot->GetE(1, index1, index2);
-          if (cu != tr || abs(cu) > 100 || abs(tr) > 100)
-            cout << "PR " << cu << " " << tr << endl;
-        }
-      }
-    }
-    int index1 = mols[i].bds[j].ID();
-    double cu = ext_pot->GetE(0, index1);
-    double tr = ext_pot->GetE(1, index1);
-    if (cu != tr || abs(cu) > 100 || abs(tr) > 100)
-      cout << "WA " << cu << " " << tr << endl;
-}}
-
-/////////////////////////////////////////
-*/
-
   delete [] d_com_z;
+//cout << "a\n" << endl;
 
 }
 
