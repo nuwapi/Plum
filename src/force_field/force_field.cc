@@ -214,9 +214,10 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     cout << "        electrostatics calculation to be correct!" << endl;
   }
   
-  ///////////////////////////////
-  // For pressure calculation. //
-  ///////////////////////////////
+  ////////////////////////////////////
+  // For pressure & mu calculation. //
+  ////////////////////////////////////
+  mu_tot_ins = 50;
   // Determining the length of the polymer chains. *Assuming that they all have
   // the same length.
   chain_len = -1;
@@ -226,10 +227,15 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
   else {
     for (int i = 0; i < (int)mols.size(); i++) {
       chain_len = mols[i].Size();
+      gc_bead_charge = mols[i].bds[0].Charge();
       if (chain_len > 1) {
         break;
       }
-    }    
+    }
+    gc_deBroglie_prefactor = 1;
+    gc_chain_len = chain_len;
+    gc_bead_symbol = "P";
+    cbmc_no_of_trials = 10;
   }
 
   // Determine the number of chains, cations and anions for the starting
@@ -260,7 +266,8 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
   vp_hs_res = vp_bead_size*0.01;  // See Chang and Sandler (1993).
   vp_g_res = vp_bead_size*0.01;
   vp_hs_bin = 4;                  // See Chang and Sandler (1993).
-  vp_g_bin = (int)floor((0.5*box_l[0]-vp_bead_size)/vp_g_res);
+  vp_g_bin = 100;  // (int)floor((0.5*box_l[0]-vp_bead_size)/vp_g_res);
+  vp_g_res = (0.5*box_l[0]-vp_bead_size)/vp_g_bin;  // vp_bead_size*0.01;
   // Four dimensional array. D1 - bin, D2 - xyz, D3 - site1, D4 site2.
   vp_hs_g = new double[vp_g_bin*3*vp_g_s];
   vp_hs_rr = new double[vp_hs_bin*3*vp_g_s];
@@ -313,21 +320,6 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     vp_el_rry = new double[1];
     vp_el_rrz = new double[1];
     lB = 0;
-  }
-
-  /////////////////////////////////////////
-  // For chemical potential calculation. //
-  /////////////////////////////////////////
-  mu_tot_ins = 100;
-  // These parameter assignments should be read from input in the next
-  // development of the code.
-  // This is for neutral system only so far.
-  if (!use_gc) {
-    gc_deBroglie_prefactor = 1;
-    gc_chain_len = chain_len;
-    gc_bead_charge = 0;
-    gc_bead_symbol = "P";
-    cbmc_no_of_trials = 20;
   }
 
   InitializeEnergy(mols);
@@ -426,11 +418,13 @@ void ForceField::FinalizeEnergies(vector<Molecule>& mols, bool accept,
 
 // !!! When using mols.size(), need to substract the phantoms out!
 void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
+  // Printing the values for g(r) - for code testing only.
+  bool use_g_test = true;
   // Use g(r) to calculate the electrostatic pressure component. If false, use
   // the direct derivative of the Ewald energy.
-  bool use_g_el = false;
+  bool use_g_el = true;
   // Use the analytical form of <dU/dV> to calculate pressure.
-  bool use_d_el = true;
+  bool use_d_el = !use_g_el;
   if (!use_ewald_pot) {
     use_d_el = false;
     use_g_el = false;
@@ -497,18 +491,22 @@ void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
             double dot_yy = vcy * vy / vlen;
             double dot_zz = vcz * vz / vlen;
             // Loop for g.
-            /*
-            if (vlen < vp_bead_size + vp_g_res*vp_g_bin) {
+            if (use_g_test && vlen < vp_bead_size + vp_g_res*vp_g_bin) {
               int bin_id = (int)floor((vlen - vp_bead_size) / vp_g_res);
               if (bin_id < 0)  bin_id = 0;
               int ix = bin_id*3*vp_g_s + 0*vp_g_s + site1*(chain_len+2) + site2;
               int iy = bin_id*3*vp_g_s + 1*vp_g_s + site1*(chain_len+2) + site2;
               int iz = bin_id*3*vp_g_s + 2*vp_g_s + site1*(chain_len+2) + site2;
-              vp_hs_g[ix] += 1.0/n_mol;
-              vp_hs_g[iy] += 1.0/n_mol;
-              vp_hs_g[iz] += 1.0/n_mol;
+              double D = 1.0/(double)n_chain;
+              if (site1 == chain_len)  D = 1.0/(double)n_cion;
+              else if (site1 == chain_len + 1)  D = 1.0/(double)n_aion;
+              if (site2 < chain_len) D *= 1.0/(double)n_chain;
+              else if (site2 == chain_len)  D *= 1.0/(double)n_cion;
+              else if (site2 == chain_len + 1) D *= 1.0/(double)n_aion;
+              vp_hs_g[ix] += D;
+              vp_hs_g[iy] += D;
+              vp_hs_g[iz] += D;
             }
-            */
             // Loop for hard sphere interactions.
             if (vlen <= vp_bead_size + vp_hs_res*vp_hs_bin) {
               int bin_id = (int)floor((vlen - vp_bead_size) / vp_hs_res);
@@ -544,7 +542,7 @@ void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
         // Warning! How many sites should be assigned to a hard wall???
         // Should we increase n_mol accordingly as well?
         // Currently, we have not changed n_mol.
-        double C = 1.0/(double)(n_mol);
+        double C = 1.0/(double)(2.0*n_mol);
         // 1/r is already applied here.
         for (int k = 0; k < 2; k++) {
           if (dist_to_wall[k] <= vp_bead_size/2.0 + vp_hs_res*vp_hs_bin) {
@@ -561,35 +559,36 @@ void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
   // Adding up results. //
   ////////////////////////
   // g. ////////////////////////////
-  /*
-  double * tot_g = new double[vp_g_bin];      // !!! Put into class???
-  for (int b = 0; b < vp_g_bin; b++) {        // Bin.
-    tot_g[b] = 0;
-    double C = 1.0/(3.0*chain_len*chain_len);
-    for (int i = 0; i < chain_len+2; i++) {    // Site 1.
-      for (int j = 0; j < chain_len+2; j++) {  // Site 2.
-        tot_g[b] += C * vp_hs_g[b*3*vp_g_s + 0*vp_g_s + i*(chain_len+2) + j];
-        tot_g[b] += C * vp_hs_g[b*3*vp_g_s + 1*vp_g_s + i*(chain_len+2) + j];
-        tot_g[b] += C * vp_hs_g[b*3*vp_g_s + 2*vp_g_s + i*(chain_len+2) + j];
+  if (use_g_test) {
+    double * tot_g = new double[vp_g_bin];      // !!! Put into class???
+    for (int b = 0; b < vp_g_bin; b++) {        // Bin.
+      tot_g[b] = 0;
+      double C = 1.0/(3.0*(1)*(1));
+      for (int i = chain_len; i < chain_len+1; i++) {    // Site 1.
+        for (int j = chain_len; j < chain_len+1; j++) {  // Site 2.
+          tot_g[b] += C * vp_hs_g[b*3*vp_g_s + 0*vp_g_s + i*(chain_len+2) + j];
+          tot_g[b] += C * vp_hs_g[b*3*vp_g_s + 1*vp_g_s + i*(chain_len+2) + j];
+          tot_g[b] += C * vp_hs_g[b*3*vp_g_s + 2*vp_g_s + i*(chain_len+2) + j];
+        }
       }
+
+      double dis1 = (b+0.0)*vp_g_res + vp_bead_size;
+      double dis2 = (b+1.0)*vp_g_res + vp_bead_size;
+      double eps_vol = 4.0/3.0*kPi * (pow(dis2, 3) - pow(dis1, 3));
+      tot_g[b] *= (1.0/(vp_z * eps_vol))/(1.0/vol);
     }
-    double dis1 = (b+0.0)*vp_g_res + vp_bead_size;
-    double dis2 = (b+1.0)*vp_g_res + vp_bead_size;
-    double eps_vol = 4.0/3.0*kPi * (pow(dis2, 3) - pow(dis1, 3));
-    tot_g[b] *= (1.0/(vp_z * eps_vol))/(n_mol/vol);
-  }
-  for (int j = 0; j < vp_hs_bin; j++) {
-    vp_hs_g_lsy[j] = tot_g[j];
-  }
-  double g_sig = Interpolate(vp_hs_g_lsx, vp_hs_g_lsy, vp_hs_bin, vp_bead_size);
-  cout << g_sig << endl;
-  for (int b = 0; b < vp_g_bin; b++) {
-    if ((b+1.0)*vp_g_res + vp_bead_size < 3)
+
+    for (int j = 0; j < vp_hs_bin; j++) {
+      vp_hs_g_lsy[j] = tot_g[j];
+    }
+    double g_sig = Interpolate(vp_hs_g_lsx, vp_hs_g_lsy, vp_hs_bin, vp_bead_size);
+    cout << g_sig << endl;
+    for (int b = 0; b < vp_g_bin; b++) {
       cout << tot_g[b] << endl;
+    }
+    cout << endl;
+    delete [] tot_g;
   }
-  cout << endl;
-  delete [] tot_g;
-  */
   // Hard sphere potential. ////////
   double * tot = new double[vp_hs_bin*3];      // !!! Put into class???
   for (int b = 0; b < vp_hs_bin; b++) {        // Bin.
@@ -673,6 +672,27 @@ void ForceField::CalcPressureVirialHSEL(vector<Molecule>& mols, double rho) {
   for (int i = 0; i < 3; i++) {
     p_tensor[i] = 1.0 + p_tensor_hs[i] + p_tensor_el[i];
   }
+
+}
+
+void ForceField::CalcPressureVirialEL(vector<Molecule>& mols) {
+  vp_z++;
+  double N = 0;
+  for (int i = 0; i < (int)mols.size(); i++) {
+    N += (double)mols[i].Size();
+  }
+
+  double * p_el = new double[3];
+  p_el[0] = p_el[1] = p_el[2] = ewald_pot->RDotF(mols, vol, npbc);
+
+  p_tensor_el_tot[0] += p_el[0]/(6*beta*N);
+  p_tensor_el_tot[1] += p_el[1]/(6*beta*N);
+  p_tensor_el_tot[2] += p_el[2]/(6*beta*N);
+  p_tensor_el[0] = p_tensor_el_tot[0]/vp_z;
+  p_tensor_el[1] = p_tensor_el_tot[1]/vp_z;
+  p_tensor_el[2] = p_tensor_el_tot[2]/vp_z;
+
+  delete [] p_el;
 
 }
 
@@ -828,11 +848,35 @@ bool ForceField::CBMCChainInsertion(vector<Molecule>& mols, mt19937& rand_gen) {
   //////////////////////////////////
   // Decide acceptance/rejection. //
   //////////////////////////////////
-  double rand_num = (double)rand_gen() / rand_gen.max(); 
-  if (rand_num < (vol * exp(beta * chem_pot - beta*dE) * weight)
-                 /(gc_deBroglie_prefactor * ((int)mols.size() + 1))) {
+  UpdateMolCounts(mols);
+  int spc1;
+  if      (gc_chain_len   >  1)  spc1 = n_chain;
+  else if (gc_bead_charge >= 0)  spc1 = n_cion;
+  else                           spc1 = n_aion;
+  int spc2;
+  if      (gc_bead_charge == 0)  spc2 = 0;
+  else if (gc_bead_charge >  0)  spc2 = n_aion;
+  else                           spc2 = n_cion;
+  int spc1_add = 1;
+  int spc2_add = gc_chain_len;
+  if      (gc_bead_charge == 0)  spc2_add = 0;
+  double factorial = 1;
+  double m1 = gc_chain_len;
+  double m2 = 1;
+  double vol_over_lam = 1;
+  for (int i = spc1 + 1; i <= spc1 + spc1_add; i++)
+    factorial *= i;
+  for (int i = spc2 + 1; i <= spc2 + spc2_add; i++)
+    factorial *= i;
+  vol_over_lam *= pow(vol/(gc_deBroglie_prefactor/pow(m1, 1.5)), spc1_add);
+  vol_over_lam *= pow(vol/(gc_deBroglie_prefactor/pow(m2, 1.5)), spc2_add);
+  double C = vol_over_lam * (1.0/(double)factorial);
+
+  double rand_num = (double)rand_gen() / rand_gen.max();
+  if (rand_num < (exp(beta*chem_pot - beta*dE) * weight) * C) {
     accept = true; 
     mols.push_back(Molecule());
+//cout << "insert " << dE << " " << (int)mols.size()-1 << endl;
     for (int i = 0; i < gc_chain_len; i++) {
       mols[(int)mols.size() - 1].AddBead(cbmc_chain[i]); 
     }
@@ -855,13 +899,16 @@ bool ForceField::CBMCChainInsertion(vector<Molecule>& mols, mt19937& rand_gen) {
 }
 
 int ForceField::CBMCChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
-  int delete_id = (double)rand_gen() / rand_gen.max() * (int)mols.size();
-  if (delete_id == (int)mols.size())  delete_id--;
-  while (mols[delete_id].Size() != gc_chain_len ||
-         mols[delete_id].bds[0].Charge() != gc_bead_charge) {
-    delete_id = (double)rand_gen() / rand_gen.max() * (int)mols.size();
-    if (delete_id == (int)mols.size())  delete_id--;
-  }
+  UpdateMolCounts(mols);
+  int spc1;
+  if      (gc_chain_len   >  1)  spc1 = n_chain;
+  else if (gc_bead_charge >= 0)  spc1 = n_cion;
+  else                           spc1 = n_aion;
+
+  int delete_id = floor((double)rand_gen()/rand_gen.max() * spc1);
+  if (delete_id >= (int)mols.size())  delete_id = (int)mols.size()-1;
+  if (gc_bead_charge != 0)
+    delete_id = delete_id * (1+gc_chain_len);
 
   ////////////////////////
   // "Grow" first bead. //
@@ -917,9 +964,28 @@ int ForceField::CBMCChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
   //////////////////////////////////
   // Decide acceptance/rejection. //
   //////////////////////////////////
+  int spc2;
+  if      (gc_bead_charge == 0)  spc2 = 0;
+  else if (gc_bead_charge >  0)  spc2 = n_aion;
+  else                           spc2 = n_cion;
+  int spc1_del = 1;
+  int spc2_del = gc_chain_len;
+  if      (gc_bead_charge == 0)  spc2_del = 0;
+  double factorial = 1;
+  double m1 = gc_chain_len;
+  double m2 = 1;
+  double lam_over_vol = 1;
+  for (int i = spc1; i > spc1 - spc1_del; i--)
+    factorial *= i;
+  for (int i = spc2; i > spc2 - spc2_del; i--)
+    factorial *= i;
+  lam_over_vol *= pow((gc_deBroglie_prefactor/pow(m1, 1.5))/vol, spc1_del);
+  lam_over_vol *= pow((gc_deBroglie_prefactor/pow(m2, 1.5))/vol, spc2_del);
+  double C = lam_over_vol * (double)factorial;
   double rand_num = (double)rand_gen() / rand_gen.max();
-  if (rand_num < ((int)mols.size() * gc_deBroglie_prefactor)
-                 / (vol * exp(beta*chem_pot - beta*dE) * weight)) {
+
+  if (rand_num < C / (exp(beta*chem_pot - beta*dE) * weight)) {
+//cout << "delete: " << dE << " " << delete_id << endl;
     if (use_pair_pot) {
       pair_pot->AdjustEnergyUponMolDeletion(mols, delete_id); 
     }
@@ -943,33 +1009,66 @@ int ForceField::CBMCChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
 double ForceField::CalcChemicalPotential(vector<Molecule>& mols,
                                          mt19937& rand_gen) {
   double total = 0;
-  for (int c = 0; c < mu_tot_ins; c++) {
-    double weight = 1.0;
-    double chosen[3];
-    for (int i = 0; i < 3; i++) {
-      chosen[i] = (double)rand_gen() / rand_gen.max() * box_l[i];
-    }
-    cbmc_chain[0].SetAllCrd(chosen);
-    weight *= exp(-beta * BeadEnergy(cbmc_chain[0], mols, 0, -1, 0));
 
-    for (int i = 1; i < gc_chain_len; i++) {
-      double Wi = CBMCGenTrialBeads(cbmc_chain[i-1], mols, i, rand_gen, -1, 0);
+  int spc1;
+  if      (gc_chain_len   >  1)  spc1 = n_chain;
+  else if (gc_bead_charge >= 0)  spc1 = n_cion;
+  else                           spc1 = n_aion;
+  int spc2;
+  if      (gc_bead_charge == 0)  spc2 = 0;
+  else if (gc_bead_charge >  0)  spc2 = n_aion;
+  else                           spc2 = n_cion;
+  int spc1_add = 1;
+  int spc2_add = gc_chain_len;
+  if      (gc_bead_charge == 0)  spc2_add = 0;
+  double factorial = 1;
+  double m1 = gc_chain_len;
+  double m2 = 1;
+  double vol_over_lam = 1;
+  for (int i = spc1 + 1; i <= spc1 + spc1_add; i++)
+    factorial *= i;
+  for (int i = spc2 + 1; i <= spc2 + spc2_add; i++)
+    factorial *= i;
+  vol_over_lam *= pow(vol/(gc_deBroglie_prefactor/pow(m1, 1.5)), spc1_add);
+  vol_over_lam *= pow(vol/(gc_deBroglie_prefactor/pow(m2, 1.5)), spc2_add);
+  double C = vol_over_lam * (1.0/(double)factorial);
+
+  int toadd = gc_chain_len;
+  if (gc_bead_charge != 0)  toadd *= 2;
+
+  for (int c = 0; c < mu_tot_ins; c++) {
+    double xyz[3];
+    double weight = 1.0;
+
+    for (int i = 0; i < 3; i++)
+      xyz[i] = (double)rand_gen() / rand_gen.max() * box_l[i];
+    cbmc_chain[0].SetAllCrd(xyz);
+    weight *= exp(-beta * BeadEnergy(cbmc_chain[0], mols, 0, -1, 0));
+  
+    int type = 0;
+    for (int i = 1; i < toadd && weight > 0; i++) {
+      if (i >= gc_chain_len)  type = 1;
+      double Wi = CBMCGenTrialBeads(cbmc_chain[i-1], mols, i, rand_gen, -1, type);
       weight *= Wi/cbmc_no_of_trials;
       double rand_num = (double)rand_gen() / rand_gen.max() * Wi;
       int current_bead = 0;
       double cumulate_weight = cbmc_trial_weights[0];
       while (cumulate_weight < rand_num) {
-        current_bead++; 
+        current_bead++;
         cumulate_weight += cbmc_trial_weights[current_bead];
       }
-      chosen[0] = cbmc_trial_beads[current_bead].GetCrd(0, 0);
-      chosen[1] = cbmc_trial_beads[current_bead].GetCrd(0, 1);
-      chosen[2] = cbmc_trial_beads[current_bead].GetCrd(0, 2);
-      cbmc_chain[i].SetAllCrd(chosen);
+      if (type == 1)  current_bead += cbmc_no_of_trials;
+      xyz[0] = cbmc_trial_beads[current_bead].GetCrd(0, 0);
+      xyz[1] = cbmc_trial_beads[current_bead].GetCrd(0, 1);
+      xyz[2] = cbmc_trial_beads[current_bead].GetCrd(0, 2);
+      cbmc_chain[i].SetAllCrd(xyz);
     }
-
-    total += (vol * weight) /
-             (gc_deBroglie_prefactor * ((int)mols.size() + 1));
+  
+    double dE = 0;
+    if (use_ewald_pot)
+      dE = ewald_pot->TrialChainEnergy(mols, cbmc_chain, toadd, -1, npbc);
+ 
+    total += (exp(-beta*dE)*weight) * C;
   }
   
   return total/(double)mu_tot_ins;
@@ -1111,6 +1210,25 @@ void ForceField::SetBoxLen(double box_l_in[3]) {
   box_l[0] = box_l_in[0];
   box_l[1] = box_l_in[1];
   box_l[2] = box_l_in[2];
+
+}
+
+void ForceField::UpdateMolCounts(vector<Molecule>& mols) {
+  n_mol = (int)mols.size();
+  n_chain = 0;
+  n_cion = 0;
+  n_aion = 0;
+  for (int i = 0; i < n_mol; i++) {
+    if (mols[i].Size() > 1) {
+      n_chain++;
+    }
+    else if (mols[i].bds[0].Charge() >= 0) {
+      n_cion++;
+    }
+    else if (mols[i].bds[0].Charge() < 0) {
+      n_aion++;
+    }
+  }
 
 }
 
