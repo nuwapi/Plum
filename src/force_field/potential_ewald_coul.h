@@ -59,7 +59,8 @@ class PotentialEwaldCoul : public PotentialEwald {
   double DipoleE(vector<Molecule>&);
   double DipoleE(vector<Molecule>&, vector<Bead>&);
   double DipoleE(vector<Molecule>&, int, int);
-
+  double DipoleEDiff(vector<Molecule>&, vector<Bead>&, Bead&, Bead&, int, int,
+                     double, int);
   double PairDForceReal(Bead&, Bead&, Bead&, Bead&, int);
   double PairDForceRepl(Bead&, Bead&, Bead&, Bead&, int);
 

@@ -79,7 +79,6 @@ Simulation::Simulation() {
   ewald_e_self_cumu = 0;
   bond_e_cumu = 0;
   ext_e_cumu = 0;
-  density_cumu = 0;
   rg_tot_cumu = 0;
   rg_x_cumu = 0;
   rg_y_cumu = 0;
@@ -104,11 +103,25 @@ Simulation::Simulation() {
   // Set up ForceField object.
   force_field.Initialize(beta, npbc, box_l, n_mol, mols);
 
+  // Densities.
+  density_cumu = 0;
+  density_z_res = 0.02;
+  density_z_bin = (int)ceil(box_l[2]/density_z_res);
+  density_z_cumu = new double[3*density_z_bin];
+  for (int i = 0; i < 3*density_z_bin; i++)
+    density_z_cumu[i] = 0;
+
   // Open output files.
   string info_out_name = run_name + "_stat.dat";
-  string traj_out_name = run_name + "_traj.xyz";
+  string traj_p_out_name = run_name + "_traj_p.xyz";
+  string traj_c_out_name = run_name + "_traj_c.xyz";
+  string traj_a_out_name = run_name + "_traj_a.xyz";
+  string traj_n_out_name = run_name + "_traj_n.xyz";
   info_out.open(info_out_name.c_str());
-  traj_out.open(traj_out_name.c_str());
+  traj_p_out.open(traj_p_out_name.c_str());
+  traj_c_out.open(traj_c_out_name.c_str());
+  traj_a_out.open(traj_a_out_name.c_str());
+  traj_n_out.open(traj_n_out_name.c_str());
   // Print header for output statistics file.
   PrintStatHeader();
 
@@ -174,9 +187,8 @@ Simulation::Simulation() {
     cout << "  Note: [!!!] "<< phantom << " phantom beads are used. Check" << endl;
     cout << "        if they are used with the appropriate parameters!" << endl;
     cout << "        Their bead type should have < 0 radius and their" << endl;
-    cout << "        coordinates should appear at the end of the input" << endl;
-    cout << "        coordiante file. Also, phantom beads are currently" << endl;
-    cout << "        not compatible with GCMC and pressure calculation!" << endl;
+    cout << "        coordinates should appear at the begining of the" << endl;
+    cout << "        input coordiante file." << endl;
   }
 
 }
@@ -185,57 +197,25 @@ Simulation::~Simulation() {
   PrintLastCrd();
   PrintLastTop();
   info_out.close();
-  traj_out.close();
+  traj_p_out.close();
+  traj_c_out.close();
+  traj_a_out.close();
+  traj_n_out.close();
+  delete [] density_z_cumu;
   cout << "\n  Simulation complete." << endl;
 
 }
 
 void Simulation::Run() {
-  /*
-  // For box shrinking equilibration.
-  double target = 29.2401773821;  //16
-  target = 23.2079441681;  //8
-  double interval = 0.01;
-  for (double i = box_l[0]; i >= target; i -= interval) {
-    box_l[0] = i - interval;
-    box_l[1] = i - interval;
-    box_l[2] = i - interval;
-    force_field.SetBoxLen(box_l);
-    force_field.InitializeEnergy(mols);
-    cout << "Box size: " << i << endl;
-  
-    bool lap = true;
-    while (lap) {
-      TranslationalMove();
-      if (force_field.TotPairEnergy() < kVeryLargeEnergy) {
-        lap = false;
-      }
-  
-      step++;
-      Sample();
-      PrintStat();
-      PrintTraj();
-      PrintLastCrd();
-      PrintLastTop();
-    }
-    for (int j = 0; j < 10000; j++) {
-      TranslationalMove();
-      step++;
-      Sample();
-      PrintStat();
-      PrintTraj();
-      PrintLastCrd();
-      PrintLastTop();
-    }
-  }
-  */
-  
   int gc_freq = force_field.GCFrequency();
+  UpdateMolCounts();
+
   for (step = 1; step <= steps; step++) {
     int rand_num = rand_gen();
     // Randomly choose whether to do a GC move.
     if (force_field.UseGC() && (rand_num % gc_freq == 0)) {
       GCMove();
+      UpdateMolCounts();
     }
     // If not doing a GC move, do a translational move.
     else {
@@ -247,6 +227,7 @@ void Simulation::Run() {
     PrintTraj();
     PrintLastCrd();
     PrintLastTop();
+    PrintLastRhoZ();
   }
 
 }
@@ -351,7 +332,7 @@ void Simulation::GCMove() {
   // Attempt insertion.
   if (insert) {
     if (step > steps_eq)  insertion_attempted++;
-    bool accept = force_field.CBMCChainInsertion(mols, rand_gen);
+    bool accept = force_field.CBMCFChainInsertion(mols, rand_gen);
     if (accept) {
       if (step > steps_eq)  insertion_accepted++;
       for (int i = n_mol; i < (int)mols.size(); i++) {
@@ -375,7 +356,7 @@ void Simulation::GCMove() {
       delete_id = -1;
     }
     else {
-      delete_id = force_field.CBMCChainDeletion(mols, rand_gen);
+      delete_id = force_field.CBMCFChainDeletion(mols, rand_gen);
       if (delete_id != -1) {
         if (step > steps_eq)  deletion_accepted++;
 
@@ -594,8 +575,10 @@ void Simulation::ReadCrd() {
       mols[mol_id].AddBead(Bead(symbol, id, mol_id, charge, x, y, z));
     }
   }
+
   // Count number of chain molecules.
-  for (int i = 0; i < (int)mols.size()-phantom; i++) {
+  n_chain = 0;
+  for (int i = phantom; i < (int)mols.size(); i++) {
     if (mols[i].Size() > 1) {
       n_chain++; 
     }
@@ -678,36 +661,6 @@ void Simulation::CoordinateObeyRigidBond(double rigid_bond) {
     }
   }
 
-  // Shift all coordinates to positive.
-  /*
-  double x_m = 0;
-  double y_m = 0;
-  double z_m = 0;
-  for (int i = 0; i < n_mol; i++) {
-    for (int j = 0; j< mols[i].Size(); j++) {
-      double x = mols[i].bds[j].GetCrd(0, 0);
-      double y = mols[i].bds[j].GetCrd(0, 1);
-      double z = mols[i].bds[j].GetCrd(0, 2);
-      if (x < x_m)  x_m = x;
-      if (y < y_m)  y_m = y;
-      if (z < z_m)  z_m = z;
-    }
-  }
-  for (int i = 0; i < n_mol; i++) {
-    for (int j = 0; j< mols[i].Size(); j++) {
-      double x = mols[i].bds[j].GetCrd(0, 0) - x_m;
-      double y = mols[i].bds[j].GetCrd(0, 1) - y_m;
-      double z = mols[i].bds[j].GetCrd(0, 2) - z_m;
-      mols[i].bds[j].SetCrd(0, 0, x);
-      mols[i].bds[j].SetCrd(1, 0, x);
-      mols[i].bds[j].SetCrd(0, 1, y);
-      mols[i].bds[j].SetCrd(1, 1, y);
-      mols[i].bds[j].SetCrd(0, 2, z);
-      mols[i].bds[j].SetCrd(1, 2, z);
-    }
-  }
-  */
-
 }
 
 void Simulation::PrintStatHeader() {
@@ -770,16 +723,22 @@ void Simulation::Sample() {
     // Density //
     /////////////
     density_cumu += (double)mols.size() / (box_l[0]*box_l[1]*box_l[2]);
+    CalcRhoZ();
     //////////////
     // Pressure //
     //////////////
-    force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
-    //force_field.CalcPressureVirialEL(mols);
-    ////////////////////////
+    if (force_field.UseExtPot()) {
+      //force_field.CalcPressureVirialHSELSlit(mols, density_cumu/ff_avg_counter);
+    }
+    else {
+      //force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
+      //force_field.CalcPressureVirialEL(mols);
+    }
+    /////////////////////////
     // Chemical potential //
     ////////////////////////
     if (calc_chem_pot) {
-      chem_pot_cumu += force_field.CalcChemicalPotential(mols, rand_gen);
+      chem_pot_cumu += force_field.CalcChemicalPotentialF(mols, rand_gen);
     }
   }
   if (step > steps_eq && step % sample_freq == 0 && (int)mols.size() > 0) {
@@ -883,10 +842,24 @@ void Simulation::PrintStat() {
 
 void Simulation::PrintTraj() {
   if (step > steps_eq && step % traj_out_freq == 0) {
-    traj_out << n_bead << endl;
-    traj_out << "STEP: " << step << endl;
+    if (n_chain > 0) {
+      traj_p_out << n_chain_b << endl;
+      traj_p_out << "STEP: " << step << endl;
+    }
+    if (n_cion > 0) {
+      traj_c_out << n_cion << endl;
+      traj_c_out << "STEP: " << step << endl;
+    }
+    if (n_aion > 0) {
+      traj_a_out << n_aion << endl;
+      traj_a_out << "STEP: " << step << endl;
+    }
+    if (n_nion > 0) {
+      traj_n_out << n_nion << endl;
+      traj_n_out << "STEP: " << step << endl;
+    }
 
-    for (int i = 0; i < n_mol; i++) {
+    for (int i = phantom; i < n_mol; i++) {
       double centerx = 0;
       double centery = 0;
       double centerz = 0;
@@ -901,15 +874,32 @@ void Simulation::PrintTraj() {
       double dispx = floor(centerx/box_l[0])*box_l[0];
       double dispy = floor(centery/box_l[1])*box_l[1];
       double dispz = floor(centerz/box_l[2])*box_l[2];
-      if (i >= n_mol-phantom) {
-        dispx = dispy = dispz = 0;
-      }
 
-      for (int j = 0; j < mols[i].Size(); j++) {
-        traj_out << mols[i].bds[j].Symbol() << " ";
-        traj_out << mols[i].bds[j].GetCrd(0, 0) - dispx << " ";
-        traj_out << mols[i].bds[j].GetCrd(0, 1) - dispy << " ";
-        traj_out << mols[i].bds[j].GetCrd(0, 2) - dispz << endl;
+      if (mols[i].Size() > 1) {
+        for (int j = 0; j < mols[i].Size(); j++) {
+          traj_p_out << mols[i].bds[j].Symbol() << " ";
+          traj_p_out << mols[i].bds[j].GetCrd(0, 0) - dispx << " ";
+          traj_p_out << mols[i].bds[j].GetCrd(0, 1) - dispy << " ";
+          traj_p_out << mols[i].bds[j].GetCrd(0, 2) - dispz << endl;
+        }
+      }
+      else if (mols[i].bds[0].Charge() > 0) {
+        traj_c_out << mols[i].bds[0].Symbol() << " ";
+        traj_c_out << mols[i].bds[0].GetCrd(0, 0) - dispx << " ";
+        traj_c_out << mols[i].bds[0].GetCrd(0, 1) - dispy << " ";
+        traj_c_out << mols[i].bds[0].GetCrd(0, 2) - dispz << endl;
+      }
+      else if (mols[i].bds[0].Charge() < 0) {
+        traj_a_out << mols[i].bds[0].Symbol() << " ";
+        traj_a_out << mols[i].bds[0].GetCrd(0, 0) - dispx << " ";
+        traj_a_out << mols[i].bds[0].GetCrd(0, 1) - dispy << " ";
+        traj_a_out << mols[i].bds[0].GetCrd(0, 2) - dispz << endl;
+      }
+      else {
+        traj_n_out << mols[i].bds[0].Symbol() << " ";
+        traj_n_out << mols[i].bds[0].GetCrd(0, 0) - dispx << " ";
+        traj_n_out << mols[i].bds[0].GetCrd(0, 1) - dispy << " ";
+        traj_n_out << mols[i].bds[0].GetCrd(0, 2) - dispz << endl;
       }
     }
   }
@@ -917,44 +907,47 @@ void Simulation::PrintTraj() {
 }
 
 void Simulation::PrintLastCrd() {
+  string bck[2] = {"", "2"};
   if (step > steps_eq && step % stat_out_freq == 0) {
-    crd_last_out.open(run_name + "_lastcrd.dat");
-
-    crd_last_out << n_bead << endl;
-    crd_last_out << " " << endl; 
-    for (int i = 0; i < n_mol; i++) {
-      double centerx = 0;
-      double centery = 0;
-      double centerz = 0;
-      for (int j = 0; j < mols[i].Size(); j++) {
-        centerx += mols[i].bds[j].GetCrd(0, 0);
-        centery += mols[i].bds[j].GetCrd(0, 1);
-        centerz += mols[i].bds[j].GetCrd(0, 2);
+    for (int f = 0; f < 2; f++) {
+      crd_last_out[f].open(run_name + "_lastcrd.dat" + bck[f]);
+  
+      crd_last_out[f] << n_bead << endl;
+      crd_last_out[f] << " " << endl; 
+      for (int i = 0; i < n_mol; i++) {
+        double centerx = 0;
+        double centery = 0;
+        double centerz = 0;
+        for (int j = 0; j < mols[i].Size(); j++) {
+          centerx += mols[i].bds[j].GetCrd(0, 0);
+          centery += mols[i].bds[j].GetCrd(0, 1);
+          centerz += mols[i].bds[j].GetCrd(0, 2);
+        }
+        centerx /= (double)mols[i].Size();
+        centery /= (double)mols[i].Size();
+        centerz /= (double)mols[i].Size();
+        double dispx = floor(centerx/box_l[0])*box_l[0];
+        double dispy = floor(centery/box_l[1])*box_l[1];
+        double dispz = floor(centerz/box_l[2])*box_l[2];
+        if (i >= n_mol-phantom) {
+          dispx = dispy = dispz = 0;
+        }
+  
+        for (int j = 0; j < mols[i].Size(); j++) {
+          crd_last_out[f] << i << " ";
+          crd_last_out[f] << mols[i].bds[j].Symbol() << " ";
+          crd_last_out[f] << setprecision(18)
+                       << mols[i].bds[j].GetCrd(0, 0) - dispx << " ";
+          crd_last_out[f] << setprecision(18)
+                       << mols[i].bds[j].GetCrd(0, 1) - dispy << " ";
+          crd_last_out[f] << setprecision(18)
+                       << mols[i].bds[j].GetCrd(0, 2) - dispz << " ";
+          crd_last_out[f] << setprecision(4) << mols[i].bds[j].Charge() << endl;
+        }
       }
-      centerx /= (double)mols[i].Size();
-      centery /= (double)mols[i].Size();
-      centerz /= (double)mols[i].Size();
-      double dispx = floor(centerx/box_l[0])*box_l[0];
-      double dispy = floor(centery/box_l[1])*box_l[1];
-      double dispz = floor(centerz/box_l[2])*box_l[2];
-      if (i >= n_mol-phantom) {
-        dispx = dispy = dispz = 0;
-      }
-
-      for (int j = 0; j < mols[i].Size(); j++) {
-        crd_last_out << i << " ";
-        crd_last_out << mols[i].bds[j].Symbol() << " ";
-        crd_last_out << setprecision(18)
-                     << mols[i].bds[j].GetCrd(0, 0) - dispx << " ";
-        crd_last_out << setprecision(18)
-                     << mols[i].bds[j].GetCrd(0, 1) - dispy << " ";
-        crd_last_out << setprecision(18)
-                     << mols[i].bds[j].GetCrd(0, 2) - dispz << " ";
-        crd_last_out << setprecision(4) << mols[i].bds[j].Charge() << endl;
-      }
+  
+      crd_last_out[f].close();
     }
-
-    crd_last_out.close();
   }
 
 }
@@ -997,6 +990,69 @@ void Simulation::PrintLastTop() {
     top_last_out << "-1" << endl; 
 
     top_last_out.close();
+  }
+
+}
+
+void Simulation::CalcRhoZ() {
+  for (int i = 0; i < n_mol; i++) {
+    int id;
+    if (mols[i].Size() > 1)                 id = 0;
+    else if (mols[i].bds[0].Charge() >= 0)  id = 1;
+    else                                    id = 2;
+ 
+    for (int j = 0; j < mols[i].Size(); j++) {
+      double z = mols[i].bds[j].GetCrd(0,2);
+      z -= box_l[2] * floor(z / box_l[2]);
+      int binz = (int)floor(z / density_z_res);
+      if (binz >= 0 && binz < density_z_bin)
+        density_z_cumu[3*binz + id] += 1.0/(box_l[0]*box_l[1]*density_z_res);
+    }
+  }
+
+}
+
+void Simulation::PrintLastRhoZ() {
+  string bck[2] = {"", "2"};
+  if (step > steps_eq && step % stat_out_freq == 0) {
+    for (int i = 0; i < 2; i++) {
+      rho_last_out[i].open(run_name + "_lastrhoZ.dat" + bck[i]);
+
+      for (int bin = 0; bin < density_z_bin; bin++) {
+        double pos = (bin + 0.5) * density_z_res;
+        rho_last_out[i] << pos << '\t'
+                        << density_z_cumu[3*bin + 0]/(double)ff_avg_counter << '\t'
+                        << density_z_cumu[3*bin + 1]/(double)ff_avg_counter << '\t'
+                        << density_z_cumu[3*bin + 2]/(double)ff_avg_counter << endl;
+      }
+      rho_last_out[i].close();
+    }
+  }
+
+}
+
+void Simulation::UpdateMolCounts() {
+  n_mol = (int)mols.size();
+  n_chain = 0;
+  n_chain_b = 0;
+  n_cion = 0;
+  n_aion = 0;
+  n_nion = 0;
+
+  for (int i = phantom; i < n_mol; i++) {
+    if (mols[i].Size() > 1) {
+      n_chain++;
+      n_chain_b += mols[i].Size();
+    }
+    else if (mols[i].bds[0].Charge() > 0) {
+      n_cion++;
+    }
+    else if (mols[i].bds[0].Charge() < 0) {
+      n_aion++;
+    }
+    else {
+      n_nion++;
+    }
   }
 
 }

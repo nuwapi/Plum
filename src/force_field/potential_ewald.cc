@@ -790,4 +790,9 @@ string PotentialEwald::PotentialName() {
 
 }
 
+bool PotentialEwald::UseDipoleCorrection() {
+  return dipole_correction;
+
+}
+
 
