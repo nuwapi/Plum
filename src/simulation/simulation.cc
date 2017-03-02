@@ -729,11 +729,14 @@ void Simulation::Sample() {
     //////////////
     // Pressure //
     //////////////
+
     if (force_field.UseExtPot()) {
+      force_field.CalcPressureVolScalingHSELSlit(mols);
       //force_field.CalcPressureVirialHSELSlit(mols, density_cumu/ff_avg_counter);
       //force_field.CalcPressureForceELSlit(mols);
     }
     else {
+      force_field.CalcPressureVolScalingHSELSlit(mols);
       //force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
       //force_field.CalcPressureVirialEL(mols);
     }
@@ -744,6 +747,7 @@ void Simulation::Sample() {
       chem_pot_cumu += force_field.CalcChemicalPotentialF(mols, rand_gen);
     }
   }
+
   if (step > steps_eq && step % sample_freq == 0 && (int)mols.size() > 0) {
     mol_avg_counter++;
     ////////////////////////

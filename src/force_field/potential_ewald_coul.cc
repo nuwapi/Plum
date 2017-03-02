@@ -20,6 +20,9 @@ PotentialEwaldCoul::~PotentialEwaldCoul() {
   delete [] kz;
   delete [] k2;
   delete [] ek2;
+  delete [] kz_forP;
+  delete [] k2_forP;
+  delete [] ek2_forP;
 
 }
 
@@ -41,6 +44,12 @@ void PotentialEwaldCoul::ReadParameters() {
     box_l[2] = box_l[2]*5;  // Why 5 times? See Frenkel and Smit.
   }
   box_vol = box_l[0]*box_l[1]*box_l[2];
+  if (dipole_correction) {
+    box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+5*kDz);
+  }
+  else {
+    box_vol_forP = box_l[0]*box_l[1]*(box_l[2]+kDz);
+  }
 
   // Automatically decide real space cutoff. Using unit charge as a criteria.
   real_cutoff = 1;
@@ -71,6 +80,9 @@ void PotentialEwaldCoul::ReadParameters() {
   kz = new double[repl_ceto[2]];
   k2 = new double[repl_ceto[0]*repl_ceto[1]*repl_ceto[2]];
   ek2 = new double[repl_ceto[0]*repl_ceto[1]*repl_ceto[2]];
+  kz_forP = new double[repl_ceto[2]];
+  k2_forP = new double[repl_ceto[0]*repl_ceto[1]*repl_ceto[2]];
+  ek2_forP = new double[repl_ceto[0]*repl_ceto[1]*repl_ceto[2]];
   for (int lx = -repl_cell[0]; lx <= repl_cell[0]; lx++) {
     kx[lx+repl_cell[0]] = lx * 2*kPi / box_l[0];
   }
@@ -79,6 +91,7 @@ void PotentialEwaldCoul::ReadParameters() {
   }
   for (int lz = -repl_cell[2]; lz <= repl_cell[2]; lz++) {
     kz[lz+repl_cell[2]] = lz * 2*kPi / box_l[2];
+    kz_forP[lz+repl_cell[2]] = lz * 2*kPi / (box_l[2] + kDz);
   }
   for (int lx = -repl_cell[0]; lx <= repl_cell[0]; lx++) {
     for (int ly = -repl_cell[1]; ly <= repl_cell[1]; ly++) {
@@ -88,7 +101,9 @@ void PotentialEwaldCoul::ReadParameters() {
         int idz = lz+repl_cell[2];
         int index = repl_ceto[1]*repl_ceto[2]*idx + repl_ceto[2]*idy + idz;
         k2[index] = kx[idx]*kx[idx] + ky[idy]*ky[idy] + kz[idz]*kz[idz];
+        k2_forP[index] = kx[idx]*kx[idx] + ky[idy]*ky[idy] + kz_forP[idz]*kz_forP[idz];
         ek2[index] = exp(-k2[index]/(4*alpha)) / k2[index];
+        ek2_forP[index] = exp(-k2_forP[index]/(4*alpha)) / k2_forP[index];
       }
     }
   }
@@ -137,6 +152,66 @@ double PotentialEwaldCoul::PairEnergyReal(Bead& bead1, Bead& bead2, int npbc) {
 
 }
 
+// PairEnergyReal for scaled volume.
+double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc) {
+  double energy = 0;
+  double dist[3];
+  double box_l_scaled[3] = {box_l[0], box_l[1], box_l[2]+kDz};
+  GetDistVector(bead1, bead2, box_l_scaled, npbc, dist);
+  double q1 = bead1.Charge();
+  double q2 = bead2.Charge();
+  double prefactor = lB*q1*q2;
+
+  for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
+    for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
+      for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
+        double r_vec[3];
+        r_vec[0] = dist[0] + i*box_l[0];
+        r_vec[1] = dist[1] + j*box_l[1];
+        if (dipole_correction)
+          r_vec[2] = dist[2] + k*(box_l[2]+kDz*5);
+        else
+          r_vec[2] = dist[2] + k*(box_l[2]+kDz);
+        double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
+        if (r > 0 && r <= real_cutoff) {
+      
+          energy += prefactor * erfc(sqrt(alpha)*r)/r;
+        }
+      }
+    }
+  }
+
+/*
+  if (q1 == q2 && q1 == 1)
+    cout << "test!!!" << energy << " ";
+  energy = 0;
+  GetDistVectorC(bead1, bead2, box_l, npbc, dist);
+
+  for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
+    for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
+      for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
+        double r_vec[3];
+        r_vec[0] = dist[0] + i*box_l[0];
+        r_vec[1] = dist[1] + j*box_l[1];
+        if (dipole_correction)
+          r_vec[2] = dist[2] + k*(box_l[2]);
+        else
+          r_vec[2] = dist[2] + k*(box_l[2]);
+        double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
+        if (r > 0 && r <= real_cutoff) {
+          energy += prefactor * erfc(sqrt(alpha)*r)/r;
+        }
+      }
+    }
+  }
+  if (q1 == q2 && q1 == 1)
+    cout << energy << endl;;
+*/
+
+  return energy;
+
+}
+
 double PotentialEwaldCoul::PairEnergyRepl(Bead& bead1, Bead& bead2, int npbc) {
   double energy = 0;
   double r[3];
@@ -161,6 +236,31 @@ double PotentialEwaldCoul::PairEnergyRepl(Bead& bead1, Bead& bead2, int npbc) {
 
 }
 
+// PairEnergyRepl for volume scaling.
+double PotentialEwaldCoul::PairEnergyReplForP(Bead& bead1, Bead& bead2, int npbc) {
+  double energy = 0;
+  double r[3];
+  double box_l_scaled[3] = {box_l[0], box_l[1], box_l[2]+kDz};
+  GetDistVector(bead1, bead2, box_l_scaled, npbc, r);
+  double q1 = bead1.Charge();
+  double q2 = bead2.Charge();
+  double prefactor = lB * q1*q2/(kPi*box_vol_forP) * (4*kPi*kPi);
+
+  for (int lx = 0; lx < repl_ceto[0]; lx++) {
+    for (int ly = 0; ly < repl_ceto[1]; ly++) {
+      for (int lz = 0; lz < repl_ceto[2]; lz++) {
+        int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
+        if (k2_forP[idx] > 0 && k2_forP[idx] <= repl_cutoff) {
+          energy += prefactor * ek2_forP[idx]
+                    * cos(kx[lx]*r[0] + ky[ly]*r[1] + kz_forP[lz]*r[2]);
+        }
+      }
+    }
+  }
+
+  return energy;
+
+}
 double PotentialEwaldCoul::SelfEnergy(Bead& bead) {
   double q = bead.Charge();
   return -lB*sqrt(alpha/kPi)*q*q;

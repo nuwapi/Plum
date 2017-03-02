@@ -62,8 +62,8 @@ double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
     if (pair_e >= kVeryLargeEnergy)  break;
 
     if (use_ewald_pot) {
-      ewald_r1  = ewald_pot->PairEnergyReal(bead1, cbmc_chain[i], npbc);
-      ewald_k1  = ewald_pot->PairEnergyRepl(bead1, cbmc_chain[i], npbc);
+      ewald_r1 = ewald_pot->PairEnergyReal(bead1, cbmc_chain[i], npbc);
+      ewald_k1 = ewald_pot->PairEnergyRepl(bead1, cbmc_chain[i], npbc);
       if (gc_bead_charge != 0) {
         ewald_r1 += ewald_pot->PairEnergyReal(bead1, cbmc_chain[i+gc_chain_len],
                                               npbc);

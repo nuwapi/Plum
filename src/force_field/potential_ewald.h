@@ -54,6 +54,7 @@ class PotentialEwald {
  protected:
   /** The volume of the simulation unit cell, in unit length. */
   double box_vol;
+  double box_vol_forP;
   double box_l[3];
   /** When there is a confining wall, we also use dipole correction. */
   bool dipole_correction;
@@ -69,6 +70,8 @@ class PotentialEwald {
   virtual double PairEnergyReal(Bead&, Bead&, int) = 0;
   /** Get reciprocal space pair energy. */
   virtual double PairEnergyRepl(Bead&, Bead&, int) = 0;
+  virtual double PairEnergyRealForP(Bead&, Bead&, int) = 0;
+  virtual double PairEnergyReplForP(Bead&, Bead&, int) = 0;
   /** Get the self energy for each bead. */
   virtual double SelfEnergy(Bead&) = 0;
   // For pressure calculations.
@@ -107,6 +110,8 @@ class PotentialEwald {
   /** Get real energy + repl energy between a specific pair in the designated
       energy map. */
   double GetERealRepl(int, int, int);
+  double GetEReal(int, int, int);
+  double GetERepl(int, int, int);
   /** Get the self-energy for a bead. */
   double GetESelf(int, int);
   /** Return total energy. */

@@ -38,8 +38,8 @@ Molecule::Molecule(const Molecule& mol) {
   for (int i = 0; i < (int)mol.diheds.size(); i++) {
     AddDihed(mol.diheds[i][0], mol.diheds[i][1], mol.diheds[i][2], mol.diheds[i][3]); 
   }
-	  for (int i = 0; i < (int)mol.bds.size(); i++) {
-	    AddBead(mol.bds[i]);
+  for (int i = 0; i < (int)mol.bds.size(); i++) {
+    AddBead(mol.bds[i]);
   }
 
 }

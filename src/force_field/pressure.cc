@@ -96,11 +96,6 @@ void ForceField::CalcPressureVirialHSELSlit(vector<Molecule>& mols,
             double el_xx = vcx * vx / pow(vlen, 3) * lB * c1 * c2;
             double el_yy = vcy * vy / pow(vlen, 3) * lB * c1 * c2;
             double el_zz = vcz * vz / pow(vlen, 3) * lB * c1 * c2;
-//if (isnan(el_zz)){
-//cout << npbc << endl;
-//cout << vcz * vz << " vlen " <<  pow(vlen, 3) << " lb " << lB << " c1 " << c1 << " c2 " << c2 << endl;
-//cout << z1 << " " << z2 << " " << i << " " << j << " " << k << " " << l << endl;
-//cout << endl;}
 
             if (vlen < rigid_bond + vp_slit_margin) {
               int ind_x_hs = (((s1*vp_d2 + s2)*vp_d3 + binz1)*vp_d4 + binz2)*vp_d6 + 0;
@@ -120,7 +115,6 @@ void ForceField::CalcPressureVirialHSELSlit(vector<Molecule>& mols,
               vp_slit_el[ind_x_el] += el_xx;
               vp_slit_el[ind_y_el] += el_yy;
               vp_slit_el[ind_z_el] += el_zz;
-//cout << ind_z_el << " " << el_zz << " " << vp_slit_el[ind_z_el] << endl;
             }
           }
         }
@@ -154,8 +148,6 @@ void ForceField::CalcPressureVirialHSELSlit(vector<Molecule>& mols,
               p_tensor_el[0] += vp_slit_el[ind_x_el];
               p_tensor_el[1] += vp_slit_el[ind_y_el];
               p_tensor_el[2] += vp_slit_el[ind_z_el];
-//if (std::isnan(vp_slit_el[ind_z_el]))
-//cout << ind_z_el << " " << vp_slit_el[ind_z_el] << endl;
             }
           }
 
@@ -265,13 +257,80 @@ void ForceField::CalcPressureForceELSlit(vector<Molecule>& mols) {
 
 /*
  * ID codes: 0 - cation, 1 - anion, 2 - polymer, 3 - surface.
+ * p_tensor[0]: average Yethiraj total total.
+ * p_tensor[1]: average de Miguel.
+ * p_tensor[2]: cumulative Yethiraj ideal gas part.
+ * p_tensor[3]: cumulative de Miguel pressure.
+ * p_tensor[4]: cumulative Yethiraj dipole part.
+ * p_tensor_el[i*4+j]: the cumulative Yethiraj electrostatic part of the pair ij.
+ * p_tensor_hs[i*4+j]: the cumulative Yethiraj LJ part of the pair ij.
  */
-void ForceField::CalcPressureVolScalingHSELSlit(vector<Molecule>& mols,
-                                                double rho) {
-  // Scaling ratio along z direction.
-  const double z_scale = 0.99999;
-  // The new position of the plate originally at z = box_l[2].
-  double plate2_z = box_l[2] * z_scale;
+void ForceField::CalcPressureVolScalingHSELSlit(vector<Molecule>& mols) {
+/*
+///////////////////////////////////
+mols[0].bds[0].SetCrd(1, 0, 0);
+mols[0].bds[0].SetCrd(1, 1, 0);
+mols[0].bds[0].SetCrd(1, 2, 0);
+mols[1].bds[0].SetCrd(1, 0, 0);
+mols[1].bds[0].SetCrd(1, 1, 0);
+mols[1].bds[0].SetCrd(1, 2, 2.5);
+for (int i=0; i<10; i+=1) {
+mols[1].bds[0].SetCrd(1, 2, 2.5+i);
+double aaa1 = ewald_pot->PairEnergyReal(mols[0].bds[0], mols[1].bds[0], npbc);
+double aaa2 = ewald_pot->PairEnergyRepl(mols[0].bds[0], mols[1].bds[0], npbc);
+cout << 2.5+i << " " << aaa1 << " " << aaa2 << " " << aaa1+aaa2 << endl;
+}
+cout<< "" << endl;
+for (int i=0; i<10; i+=1) {
+mols[1].bds[0].SetCrd(1, 2, 2.5+i);
+double aaa1 = ewald_pot->PairEnergyRealForP(mols[0].bds[0], mols[1].bds[0], npbc);
+double aaa2 = ewald_pot->PairEnergyReplForP(mols[0].bds[0], mols[1].bds[0], npbc);
+cout << 2.5+i << " " << aaa1 << " " << aaa2 << " " << aaa1+aaa2 << endl;
+}
+cout<< "\n\n\n\n\n" << endl;
+///////////////////////////////////
+*/
+
+
+  vp_z++;
+  double dU = 0;
+  double oldE = 0;
+  double newE = 0;
+  double box_l_scaled[3] = {box_l[0], box_l[1], box_l[2]+kDz};
+
+  double * d_com_z;
+  if (n_mol != 0)
+    d_com_z = new double[n_mol];
+  else
+    d_com_z = new double[1];
+
+  // Calculate COMs.
+  for (int i = 0; i < n_mol; i++) {
+    // Calculate the center of mass position along z axis.
+    double com_z = 0;
+    for (int j = 0; j < mols[i].Size(); j++) {
+      com_z += mols[i].bds[j].GetCrd(0, 2);
+    }
+    com_z /= mols[i].Size();
+    // Find out how much the com should move.
+    d_com_z[i] = kDz * (com_z / box_l[2]);
+  }
+  /*
+  // If a counter ion is condensed on a polymer, move it the same amount as the
+  // polymer is moved.
+  for (int i = phantom; i < n_mol; i++) {
+    if (mols[i].Size() == 1 && mols[i].bds[0].Charge() > 0) {
+      for (int j = phantom; j < n_mol; j++) {
+        if (mols[j].Size() > 1) {
+          for (int k = 0; k < mols[j].Size(); k++) {
+            double r = mols[i].bds[0].BBDistC(mols[j].bds[k], box_l, npbc);
+            if (r < 3.0)  d_com_z[i] = d_com_z[j];
+          }
+        }
+      }
+    }
+  }
+  */
 
   for (int i = 0; i < n_mol; i++) {
     int id_i;
@@ -280,59 +339,152 @@ void ForceField::CalcPressureVolScalingHSELSlit(vector<Molecule>& mols,
     else if (mols[i].bds[0].Charge() >= 0)  id_i = 0;  // Cation.
     else                                    id_i = 1;  // Anion.
 
-    // Calculate the center of mass position along z axis.
-    double com_z = 0;
-    for (int j = 0; j < mols[i].Size(); j++) {
-      com_z += mols[i].bds[j].GetCrd(0, 2);
-    }
-    com_z /= mols[i].Size();
-    // Calculate the z displacement for the entire molecule.
-    double dz = com_z * z_scale - com_z;
-
     // For every atom in the molecule, calculate its energy with all atoms that
     // are not in the same molecule.
     for (int j = 0; j < mols[i].Size(); j++) {
       // Update atom trial position.
-      mols[i].bds[j].SetCrd(1, 2, mols[i].bds[j].GetCrd(0, 2) + dz);
+      mols[i].bds[j].SetCrd(1, 2, mols[i].bds[j].GetCrd(0, 2) + d_com_z[i]);
 
       // For all other molecules.
       for (int k = i + 1; k < n_mol; k++) {
         for (int l = 0; l < mols[k].Size(); l++) {
           if (i >= phantom || (i < phantom/2 && k >= phantom/2)) {
+            mols[k].bds[l].SetCrd(1, 2, mols[k].bds[l].GetCrd(0, 2) + d_com_z[k]);
+
             int id_k;
             if (k < phantom)                        id_k = 3;  // Surface.
             else if (mols[k].Size() > 1)            id_k = 2;  // Polymer.
             else if (mols[k].bds[0].Charge() >= 0)  id_k = 0;  // Cation.
             else                                    id_k = 1;  // Anion.
 
-            // Cation-cation
+            int index1 = (id_i < id_k)? id_i : id_k;  // The smaller index.
+            int index2 = (id_i > id_k)? id_i : id_k;  // The bigger index.
+            int index = index1 * 4 + index2;
+            // Reusing variables.
+            index1 = min(mols[i].bds[j].ID(), mols[k].bds[l].ID());
+            index2 = max(mols[i].bds[j].ID(), mols[k].bds[l].ID());
 
-            // Cation-anion
+            if (use_ewald_pot) {
+              oldE = ewald_pot->GetERealRepl(0, index1, index2);
+              newE = ewald_pot->PairEnergyRealForP(mols[i].bds[j], mols[k].bds[l], npbc);
+              newE += ewald_pot->PairEnergyReplForP(mols[i].bds[j], mols[k].bds[l], npbc);
+              dU += newE - oldE;
+              p_tensor_el[index] += newE - oldE;
+            }
+            if (use_pair_pot && i >= phantom && k >= phantom) {
+              oldE = pair_pot->GetE(0, index1, index2);
+              newE = pair_pot->PairEnergy(mols[i].bds[j], mols[k].bds[l], box_l_scaled, npbc);
+              dU += newE - oldE;
+              p_tensor_hs[index] += newE - oldE;
+            }
 
-            // Cation-polymer
-
-            // Cation-surface
-
-            // Anion-anion
-
-            // Anion-polymer
-
-            // Anion-surface
-
-            // Polymer-polymer
-
-            // Polymer-surface
-
-            // Surface-surface
+            mols[k].bds[l].SetCrd(1, 2, mols[k].bds[l].GetCrd(0, 2));
           }
-          
         }
+      }
+
+      // Calculate surface-particle LJ interaction.
+      if (use_ext_pot && i >= phantom) {
+        int index1 = (id_i < 3)? id_i : 3;  // The smaller index.
+        int index2 = (id_i > 3)? id_i : 3;  // The bigger index.
+        int index = index1 * 4 + index2;
+        oldE = ext_pot->GetE(0, mols[i].bds[j].ID());
+        newE = ext_pot->BeadEnergy(mols[i].bds[j], box_l_scaled);
+        dU += newE - oldE;
+        p_tensor_hs[index] += newE - oldE;
       }
 
       // Recover atom trial position
       mols[i].bds[j].SetCrd(1, 2, mols[i].bds[j].GetCrd(0, 2));
     }
   }
+
+  // Calculate the ideal part of the pressure.
+  p_tensor[2] += (n_mol-phantom)/vol;
+
+  // Calculate the dipole part of pressure.
+  if (use_ewald_pot && ewald_pot->UseDipoleCorrection()) {
+    double Mz_old = 0;
+    double Mz_new = 0;
+    double lB = ewald_pot->GetlB();
+    for (int i = 0; i < (int)mols.size(); i++) {
+      for (int j = 0; j < mols[i].Size(); j++) {
+        double z = mols[i].bds[j].GetCrd(0, 2);
+        double c = mols[i].bds[j].Charge();
+        Mz_old += c*z;
+        Mz_new += c*(z+d_com_z[i]);
+      }
+    }
+    double d_di = (lB*2*kPi)*(Mz_new*Mz_new/(box_l[0]*box_l[1]*box_l_scaled[2])
+                             -Mz_old*Mz_old/vol);
+    dU += d_di;
+    p_tensor[4] += d_di;
+  }
+
+  // Calculate de Miguel.
+  p_tensor[3] += pow(1.0+kDz/box_l[2], n_mol-phantom)*exp(-beta*dU);
+
+  // *** Calculate average from cumulations. ***
+  // Yethiraj.
+  p_tensor[0] = 0;
+  for (int i = 0; i < 4; i++) {
+    for (int j = i; j < 4; j++) {
+      int index = i * 4 + j;
+      p_tensor[0] += p_tensor_el[index] + p_tensor_hs[index];
+    }
+  }
+
+  p_tensor[0] += p_tensor[4];
+
+  p_tensor[0] /= (box_l[0]*box_l[1]*kDz);
+  p_tensor[0] = (beta*p_tensor[2] - p_tensor[0])/vp_z;
+  ///// Print all terms.
+  for (int i = 0; i < 4; i++) {
+    for (int j = i; j < 4; j++) {
+      int index = i * 4 + j;
+      p_tensor2[index] = -p_tensor_hs[index]/(box_l[0]*box_l[1]*kDz*vp_z);
+      p_tensor3[index] = -p_tensor_el[index]/(box_l[0]*box_l[1]*kDz*vp_z);
+
+    }
+  }
+  p_tensor2[18] = -p_tensor[4]/(box_l[0]*box_l[1]*kDz*vp_z);
+  p_tensor2[19] = beta*p_tensor[2]/vp_z; 
+  /////
+  // de Miguel.
+  p_tensor[1] = beta/(box_l[0]*box_l[1]*kDz)*log(p_tensor[3]/vp_z);
+
+
+/*/////////////////////////////////////////
+//cout << n_mol << endl;
+for (int i = 0; i < n_mol; i++) {
+  for (int j = 0; j < mols[i].Size(); j++) {
+    for (int k = 0; k < n_mol; k++) {
+      for (int l = 0; l < mols[k].Size(); l++) {
+        int index1 = min(mols[i].bds[j].ID(), mols[k].bds[l].ID());
+        int index2 = max(mols[i].bds[j].ID(), mols[k].bds[l].ID());
+        double cu = ewald_pot->GetERealRepl(0, index1, index2);
+        double tr = ewald_pot->GetERealRepl(1, index1, index2);
+        if (cu != tr || abs(cu) > 100 || abs(tr) > 100)
+          cout << "EW " << cu << " " << tr << endl;
+        if (i!=j || k!=l) {
+          cu = pair_pot->GetE(0, index1, index2);
+          tr = pair_pot->GetE(1, index1, index2);
+          if (cu != tr || abs(cu) > 100 || abs(tr) > 100)
+            cout << "PR " << cu << " " << tr << endl;
+        }
+      }
+    }
+    int index1 = mols[i].bds[j].ID();
+    double cu = ext_pot->GetE(0, index1);
+    double tr = ext_pot->GetE(1, index1);
+    if (cu != tr || abs(cu) > 100 || abs(tr) > 100)
+      cout << "WA " << cu << " " << tr << endl;
+}}
+
+/////////////////////////////////////////
+*/
+
+  delete [] d_com_z;
 
 }
 

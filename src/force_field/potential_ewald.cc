@@ -117,6 +117,42 @@ double PotentialEwald::GetERealRepl(int flag, int key1, int key2) {
  
 }
 
+double PotentialEwald::GetEReal(int flag, int key1, int key2) {
+  double ene_real;
+  if (flag == 0) {
+    ene_real = current_real_energy_map[make_pair(key1, key2)];
+    return ene_real;
+  }
+  else if (flag == 1) {
+    ene_real = trial_real_energy_map[make_pair(key1, key2)];
+    return ene_real;
+  }
+  else {
+    cout << "PotentialEwald::GetEReal:\n  Invalid flag." << endl;
+    return 1;
+  }
+  return 0;
+
+}
+
+double PotentialEwald::GetERepl(int flag, int key1, int key2) {
+  double ene_repl;
+  if (flag == 0) {
+    ene_repl = current_repl_energy_map[make_pair(key1, key2)];
+    return ene_repl;
+  }
+  else if (flag == 1) {
+    ene_repl = trial_repl_energy_map[make_pair(key1, key2)];
+    return ene_repl;
+  }
+  else {
+    cout << "PotentialEwald::GetERepl:\n  Invalid flag." << endl;
+    return 1;
+  }
+  return 0;
+
+}
+
 double PotentialEwald::GetESelf(int flag, int key) {
  if (flag == 0) {
    return current_self_energy_map[key];

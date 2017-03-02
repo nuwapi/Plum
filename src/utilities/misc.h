@@ -15,6 +15,8 @@ double getDist(Bead*, Bead*, double[], int);
 /** The distance vector from bead1 to bead2. The vector components will be
     stored in double (&)[3]. */
 void GetDistVector(Bead&, Bead&, double[], int, double (&)[3]);
+/** Same function using the current position. */
+void GetDistVectorC(Bead&, Bead&, double[], int, double (&)[3]);
 /** Fills in a vector with random point on unit sphere. */
 void randSphere(double[], std::mt19937&);
 /** Returns rand deviate from gaussian distribution with mean 0 and stdev 1.

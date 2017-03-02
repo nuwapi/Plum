@@ -175,6 +175,22 @@ double Bead::BBDist(Bead& bead, double box_l[], int npbc) {
 
 }
 
+double Bead::BBDistC(Bead& bead, double box_l[], int npbc) {
+  double dist = 0;
+  for (int i = 0; i < 3; i++) {
+    double dist_i = current_pos[i] - bead.current_pos[i];
+    if (i < npbc) {
+      dist_i -= box_l[i] * round(dist_i / box_l[i]);
+      if (abs(dist_i) > 0.5*box_l[i]) {
+        dist_i = box_l[i] - abs(dist_i);
+      }
+    }
+    dist += (dist_i * dist_i);
+  }
+  return sqrt(dist);
+
+}
+
 double Bead::BBDistVec(Bead& bead, double box_l[], int npbc, int index) {
   double dist_i = trial_pos[index] - bead.trial_pos[index];
   if (index < npbc) {

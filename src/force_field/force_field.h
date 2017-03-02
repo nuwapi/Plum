@@ -117,10 +117,12 @@ class ForceField {
   /*** Bjerrum length for pressure calculation. */
   double lB;
   /** The three diagonal elements for the pressure tensor. */
-  double p_tensor[6];
-  double p_tensor_hs[3];
-  double p_tensor_el[6];
-  double p_tensor_el_tot[3];
+  double p_tensor[20];
+  double p_tensor2[20];
+  double p_tensor3[20];
+  double p_tensor_hs[20];
+  double p_tensor_el[20];
+  double p_tensor_el_tot[20];
   // Virial method to calculate pressure for general systems "vp" for "virial
   // pressure".
   /** Hard sphere size. */
@@ -229,6 +231,7 @@ class ForceField {
   void CalcPressureForceELSlit(vector<Molecule>&);
   /** Initialize the HS and EL multipliers. */
   void InitPressureVirialHSELSlit();
+  void CalcPressureVolScalingHSELSlit(vector<Molecule>&);
   /** Get pressure components from their storage array. */
   string GetPressure();
 

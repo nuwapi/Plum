@@ -29,7 +29,7 @@ class PotentialExternal{
   double GetE(int, int);
   void SetEBothMaps(int, double);
   void EnergyInitialization(vector < Molecule >& mols, double[], int);
-  void EnergyInitForLastMol(vector < Molecule >& mols, double[], int);
+  void EnergyInitForLastMol(vector < Molecule >& mols, int, double, double[], int);
   void AdjustEnergyUponMolDeletion(vector < Molecule >& mols, int);
   double EnergyDifference(vector < Molecule >& mols, int, double[], int);
   void FinalizeEnergyBothMaps(vector < Molecule >& mols, int, bool);

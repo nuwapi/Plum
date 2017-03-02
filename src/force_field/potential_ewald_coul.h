@@ -42,6 +42,9 @@ class PotentialEwaldCoul : public PotentialEwald {
   double * k2;
   /** "exp(-k2/(4*alpha))/k2" for all vector k. */
   double * ek2;
+  double * kz_forP;
+  double * k2_forP;
+  double * ek2_forP;
 
  public: 
   // Initialization functions.
@@ -55,6 +58,8 @@ class PotentialEwaldCoul : public PotentialEwald {
   /** Energy between two beads. */
   double PairEnergyReal(Bead&, Bead&, int);   
   double PairEnergyRepl(Bead&, Bead&, int);
+  double PairEnergyRealForP(Bead&, Bead&, int);
+  double PairEnergyReplForP(Bead&, Bead&, int);
   double SelfEnergy(Bead&);
   double DipoleE(vector<Molecule>&);
   double DipoleE(vector<Molecule>&, vector<Bead>&);

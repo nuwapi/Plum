@@ -60,13 +60,14 @@ void PotentialExternal::EnergyInitialization(vector<Molecule>& mols,
 
 }
 
-void PotentialExternal::EnergyInitForLastMol(vector<Molecule>& mols,
-                                             double box_l[], int npbc) {
+void PotentialExternal::EnergyInitForLastMol(vector<Molecule>& mols, int chain_len,
+                                             double bead_charge, double box_l[],
+                                             int npbc) {
   int added = 1;
   // Assume all chains are the same and always go before their counterions!!!
   // Assume monovalent ions.
-  for (int i = 0; i < mols[0].Size(); i++)
-    added += (int)abs(round(mols[0].bds[i].Charge()));
+  if (bead_charge != 0)
+    added += chain_len;
 
   for (int i = (int)mols.size()-added; i < (int)mols.size(); i++) {
     for (int j = 0; j < mols[i].Size(); j++) {

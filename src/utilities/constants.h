@@ -52,6 +52,8 @@ const double kEps0 = 0.00552634963;
 /** The number of different Monte Carlo moves implemented in the code. */
 const int kNoMoveType = 5;
 
+const double kDz = 0.00001;
+
 #endif
 
 

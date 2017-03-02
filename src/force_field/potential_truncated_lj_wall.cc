@@ -47,14 +47,17 @@ double PotentialTruncatedLJWall::BeadEnergy(Bead& bead, double box_l[]) {
   double energy = 0;
   // Get the z coordinate from the trial coordinate array.
   double z = bead.GetCrd(1, 2);
+  double sigma = sigmas[bead.Symbol()];
+  double epsilon = epsilons[bead.Symbol()];
+
+  if (epsilon == 0) {
+    energy = 0;
+  }
   // If the bead falls outside of the box in the z-direction.
-  if (z <= 0 || z >= box_l[2]) {
+  else if (z <= 0 || z >= box_l[2]) {
     return kVeryLargeEnergy;
   }
   else {
-    double sigma = sigmas[bead.Symbol()];
-    double epsilon = epsilons[bead.Symbol()];
-
     // Use WCA.
     if (m_cut < 0) {
       // 1.20093695518 = 3^(1/6)
