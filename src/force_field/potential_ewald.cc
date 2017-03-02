@@ -193,6 +193,7 @@ void PotentialEwald::EnergyInitialization(vector<Molecule>& mols, int npbc) {
    
 }
 
+// chain_len is the total number of beads in the chain plus its counterions.
 double PotentialEwald::TrialChainEnergy(vector<Molecule>& mols,
                                         vector<Bead>& chain, int chain_len,
                                         int delete_id, int npbc) {
@@ -201,7 +202,7 @@ double PotentialEwald::TrialChainEnergy(vector<Molecule>& mols,
 
   // For insertion.
   int beads = 0;
-  for (int i = 0; i < (int)mols.size(); i++)
+  for (int i = 0; i < (int)mols.size(); i++) 
     beads += mols[i].Size();
   int tot = chain_len * (2*(beads+chain_len) + 1);
   int sub = 2*(beads+chain_len) + 1;
@@ -209,7 +210,7 @@ double PotentialEwald::TrialChainEnergy(vector<Molecule>& mols,
   ///////////////////
   // If insertion. //
   ///////////////////
-  if (delete_id == -1) {
+  if (delete_id <= 0) {
     delete [] trial_chain_e;
     trial_chain_e = new double[tot];
     // Intramolecular.
@@ -243,7 +244,7 @@ double PotentialEwald::TrialChainEnergy(vector<Molecule>& mols,
     // Self.
     for (int i = 0; i < chain_len; i++) {
       ene_self = SelfEnergy(chain[i]);
-      trial_chain_e[i*sub + 2*(beads + chain_len)] = ene_self;
+      // trial_chain_e[i*sub + 2*(beads + chain_len)] = ene_self;
       dE += ene_self;
     }
     // Only used when a confining potential is used.
@@ -296,6 +297,7 @@ double PotentialEwald::TrialChainEnergy(vector<Molecule>& mols,
 
 }
 
+// chain_len here is the actual chain length.
 void PotentialEwald::EnergyInitForLastMol(vector<Molecule>& mols, int chain_len,
                                           double bead_charge, int npbc) {
   double ene_real, ene_repl, ene_self;
@@ -303,8 +305,8 @@ void PotentialEwald::EnergyInitForLastMol(vector<Molecule>& mols, int chain_len,
   int added = 1;
   // Assume all chains are the same and always go before their counterions!!!
   // Assume monovalent ions.
-  for (int i = 0; i < mols[0].Size(); i++)
-    added += (int)abs(round(mols[0].bds[i].Charge()));
+  if (bead_charge != 0)
+    added += chain_len;
   int added_b = 0;
   for (int i = (int)mols.size()-added; i < (int)mols.size(); i++)
     added_b += mols[i].Size();
@@ -314,11 +316,11 @@ void PotentialEwald::EnergyInitForLastMol(vector<Molecule>& mols, int chain_len,
   int sub = 2*(exist_b + added_b) + 1;
 
   // Real/repl.
-  int c_add = 0;
+  int c_add = 0;  // Counter.
   for (int i = (int)mols.size()-added; i < (int)mols.size(); i++) {
     for (int j = 0; j < mols[i].Size(); j++) {
-     // With existing beads.
-     int c_all = 0;
+      // With existing beads.
+      int c_all = 0;
       for (int k = 0; k < (int)mols.size()-added; k++) {
         for (int l = 0; l < mols[k].Size(); l++) {
           int id1 = mols[k].bds[l].ID();

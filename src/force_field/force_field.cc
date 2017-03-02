@@ -20,6 +20,7 @@ ForceField::ForceField () {
 }
 
 ForceField::~ForceField () {
+  delete [] gc_chain_chg;
   delete [] cbmc_trial_weights;
   
   if (!use_ext_pot) {
@@ -43,7 +44,8 @@ ForceField::~ForceField () {
 }
 
 void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
-                            int n_mol, vector<Molecule>& mols) {
+                            vector<Molecule>& mols, int phantom_in,
+                            int coion_in) {
   // Initial setting up.
   beta = beta_in;
   npbc = npbc_in;
@@ -52,6 +54,8 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     box_l[i] = box_l_in[i];
   }
   vol = box_l[0]*box_l[1]*box_l[2];
+  phantom = phantom_in;
+  coion = coion_in;
 
   // Read in.
   string flag;
@@ -148,7 +152,7 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     cin >> flag >> potential_name;
     if (potential_name == "Spring") {
       soft_pot++;
-      bond_pot = new PotentialSpring(n_mol, potential_name);
+      bond_pot = new PotentialSpring((int)mols.size(), potential_name);
     }
     else {
       cout << "ForceField::ReadParameters: " << endl;
@@ -227,14 +231,15 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
   // Init molecular info and prep mu calculation. //
   //////////////////////////////////////////////////
   mu_tot_ins = 50;
-  // Determining the length of the polymer chains. *Assuming that they all have
-  // the same length.
+  // Determining the length of the polymer chains. *** Assuming that they all
+  // have the same length and each monomer carries the same charge.
   chain_len = -1;
   if (use_gc) { 
     chain_len = gc_chain_len;
   }
+  // For mu calculation.
   else {
-    for (int i = 0; i < (int)mols.size(); i++) {
+    for (int i = phantom; i < (int)mols.size(); i++) {
       chain_len = mols[i].Size();
       gc_bead_charge = mols[i].bds[0].Charge();
       if (chain_len > 1) {
@@ -249,14 +254,18 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
 
   // Determine the number of chains, cations and anions for the starting
   // configuration for the pressure calculation.
-  this->n_mol = (int)mols.size();
+  n_mol = (int)mols.size();
   n_chain = 0;
   n_cion = 0;
   n_aion = 0;
-  for (int i = 0; i < this->n_mol; i++) {
+  for (int i = phantom; i < n_mol; i++) {
     if (mols[i].Size() > 1) {
       n_chain++;
     }
+    // Counting "neutral ions" into cations. In fact, we either simulate
+    // "neutral ions" in the all neutral systems or cations in the all charged
+    // systems. Here the two types of ions merely share the same placeholder,
+    // they will and should never co-exist under the current simulation code.
     else if (mols[i].bds[0].Charge() >= 0) {
       n_cion++;
     }
@@ -265,6 +274,12 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
     }
   }
 
+  // Eventually, gc_chain_chg should be read from file. Currently we only
+  // study uniform chain charge distribution.
+  gc_chain_chg = new double[gc_chain_len];
+  for (int i = 0; i < gc_chain_len; i++)
+    gc_chain_chg[i] = gc_bead_charge;
+
   ////////////////////////////////
   // Init pressure calculation. //
   ////////////////////////////////
@@ -272,6 +287,9 @@ void ForceField::Initialize(double beta_in, int npbc_in, double box_l_in[3],
   p_tensor[0] = p_tensor_hs[0] = p_tensor_el[0] = p_tensor_el_tot[0] = 0;
   p_tensor[1] = p_tensor_hs[1] = p_tensor_el[1] = p_tensor_el_tot[1] = 0;
   p_tensor[2] = p_tensor_hs[2] = p_tensor_el[2] = p_tensor_el_tot[2] = 0;
+  p_tensor[3] = p_tensor_el[3] = 0;
+  p_tensor[4] = p_tensor_el[4] = 0;
+  p_tensor[5] = p_tensor_el[5] = 0;
 
   if (!use_ext_pot) {
     // chain_len number of sites plus 2 that stands for counterion and coion.
@@ -366,23 +384,21 @@ void ForceField::InitializeEnergy(vector<Molecule>& mols) {
   // Add beads to CG CBMC data structures. Proper IDs are not assigned at this
   // stage since the beads are not yet in the simulation.
   for (int i = 0; i < gc_chain_len; i++) {
-    Bead bead(gc_bead_symbol, -1, -1, gc_bead_charge, 0, 0, 0);
+    Bead bead(gc_bead_symbol, -1, -1, gc_chain_chg[i], 0, 0, 0);
     cbmc_chain.push_back(bead);
   }
   for (int i = 0; i < cbmc_no_of_trials; i++) {
-    Bead bead(gc_bead_symbol, -1, -1, gc_bead_charge, 0, 0, 0);
+    Bead bead(gc_bead_symbol, -1, -1, gc_chain_chg[0], 0, 0, 0);
     cbmc_trial_beads.push_back(bead);
   }
-  // Add counterions into array if the chain is charged.
-  if (gc_bead_charge != 0) {
-    for (int i = 0; i < gc_chain_len; i++) {
-      Bead bead(gc_bead_symbol, -1, -1, -gc_bead_charge, 0, 0, 0);
-      cbmc_chain.push_back(bead);
-    }
-    for (int i = 0; i < cbmc_no_of_trials; i++) {
-      Bead bead(gc_bead_symbol, -1, -1, -gc_bead_charge, 0, 0, 0);
-      cbmc_trial_beads.push_back(bead);
-    }
+  // Add counterions into array in case the chain is charged.
+  for (int i = 0; i < gc_chain_len; i++) {
+    Bead bead(gc_bead_symbol, -1, -1, -gc_chain_chg[i], 0, 0, 0);
+    cbmc_chain.push_back(bead);
+  }
+  for (int i = 0; i < cbmc_no_of_trials; i++) {
+    Bead bead(gc_bead_symbol, -1, -1, -gc_chain_chg[0], 0, 0, 0);
+    cbmc_trial_beads.push_back(bead);
   }
   // Will be initialized in other functions before use.
   cbmc_trial_weights = new double[cbmc_no_of_trials];
@@ -704,9 +720,16 @@ void ForceField::CalcPressureVirialEL(vector<Molecule>& mols) {
 
 string ForceField::GetPressure() {
   std::ostringstream foo;
+  
   foo << p_tensor[0]    << " " << p_tensor[1]    << " " << p_tensor[2]    << " "
       << p_tensor_hs[0] << " " << p_tensor_hs[1] << " " << p_tensor_hs[2] << " "
       << p_tensor_el[0] << " " << p_tensor_el[1] << " " << p_tensor_el[2];
+ 
+  /* 
+  foo << p_tensor[0] << " " << p_tensor[1] << " " << p_tensor[2] << " "
+      << p_tensor[3] << " " << p_tensor[4] << " " << p_tensor[5] << " "
+      << "0 0 0";
+  */
   return foo.str();
 
 }
@@ -882,7 +905,6 @@ bool ForceField::CBMCChainInsertion(vector<Molecule>& mols, mt19937& rand_gen) {
   if (rand_num < (exp(beta*chem_pot - beta*dE) * weight) * C) {
     accept = true; 
     mols.push_back(Molecule());
-//cout << "insert " << dE << " " << (int)mols.size()-1 << endl;
     for (int i = 0; i < gc_chain_len; i++) {
       mols[(int)mols.size() - 1].AddBead(cbmc_chain[i]); 
     }
@@ -991,7 +1013,6 @@ int ForceField::CBMCChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
   double rand_num = (double)rand_gen() / rand_gen.max();
 
   if (rand_num < C / (exp(beta*chem_pot - beta*dE) * weight)) {
-//cout << "delete: " << dE << " " << delete_id << endl;
     if (use_pair_pot) {
       pair_pot->AdjustEnergyUponMolDeletion(mols, delete_id); 
     }
@@ -1224,7 +1245,7 @@ void ForceField::UpdateMolCounts(vector<Molecule>& mols) {
   n_chain = 0;
   n_cion = 0;
   n_aion = 0;
-  for (int i = 0; i < n_mol; i++) {
+  for (int i = phantom; i < n_mol; i++) {
     if (mols[i].Size() > 1) {
       n_chain++;
     }

@@ -40,6 +40,7 @@ Simulation::Simulation() {
   cin >> flag >> move_size;
   cin >> flag >> calc_chem_pot;
   cin >> flag >> phantom;
+  cin >> flag >> coion;
   cin >> flag >> move_prob[0];
   cin >> flag >> move_prob[1];
   cin >> flag >> move_prob[2];
@@ -59,7 +60,8 @@ Simulation::Simulation() {
   cout << setw(35) << "beta (1/kBT)                : " << beta          << endl;
   cout << setw(35) << "Calculate chemical pot?     : " << YesOrNo(calc_chem_pot)
                                                        << endl;
-  cout << setw(35) << "Number of phantom beads     : " << phantom       << endl;
+  cout << setw(35) << "Number of phantom molecules : " << phantom       << endl;
+  cout << setw(35) << "Number of coions            : " << coion         << endl;
   cout << setw(35) << "p(bead translation move)    : " << move_prob[0]  << endl;
   cout << setw(35) << "p(pol COM translation move) : " << move_prob[1]  << endl;
   cout << setw(35) << "p(pol pivot move)           : " << move_prob[2]  << endl;
@@ -101,7 +103,7 @@ Simulation::Simulation() {
   // Read coordinates.
   ReadCrd();
   // Set up ForceField object.
-  force_field.Initialize(beta, npbc, box_l, n_mol, mols);
+  force_field.Initialize(beta, npbc, box_l, mols, phantom, coion);
 
   // Densities.
   density_cumu = 0;
@@ -169,7 +171,7 @@ Simulation::Simulation() {
   if (move_prob[3] > 0 && force_field.UseBondRigid()) {
     cout << "  The current crankshaft MC move and rigid bond cannot be used at "
          << "the same time. Exiting! Program complete." << endl;
-    exit(1);
+    //exit(1);
   }
   // If reptation and rigid bond are not used at the same time.
   if (move_prob[4] > 0 && (!force_field.UseBondRigid())) {
@@ -187,7 +189,7 @@ Simulation::Simulation() {
     cout << "  Note: [!!!] "<< phantom << " phantom beads are used. Check" << endl;
     cout << "        if they are used with the appropriate parameters!" << endl;
     cout << "        Their bead type should have < 0 radius and their" << endl;
-    cout << "        coordinates should appear at the begining of the" << endl;
+    cout << "        coordinates should appear at the BEGINING of the" << endl;
     cout << "        input coordiante file." << endl;
   }
 
@@ -215,7 +217,6 @@ void Simulation::Run() {
     // Randomly choose whether to do a GC move.
     if (force_field.UseGC() && (rand_num % gc_freq == 0)) {
       GCMove();
-      UpdateMolCounts();
     }
     // If not doing a GC move, do a translational move.
     else {
@@ -233,13 +234,30 @@ void Simulation::Run() {
 }
 
 void Simulation::TranslationalMove() {
-  if (n_mol > 0) {
-    // Pre-choose a chain and a single bead.
-    int chain_id = (double)rand_gen()/rand_gen.max() * n_chain;
-    int single_id = (double)rand_gen()/rand_gen.max() * (n_mol-n_chain-phantom);
+  if (n_mol - phantom > 0) {
+    // Pre-choose a chain and an ion.
+    int chain_id = -1;
+    int ion_id = -1;
     int mol_id = -1;
-    if (chain_id == n_chain)                 chain_id--;
-    if (single_id == n_mol-n_chain-phantom)  single_id--;
+    int which_chain = (int)floor((double)rand_gen()/rand_gen.max() * n_chain);
+    int which_ion   = (int)floor((double)rand_gen()/rand_gen.max() *
+                                 (n_cion + n_aion + n_nion));
+    if (which_chain == n_chain)                 which_chain--;
+    if (which_ion == n_cion + n_aion + n_nion)  which_ion--;
+    int chain_choosing_counter = -1;
+    int ion_choosing_counter = -1;
+    for (int i = phantom; i < n_mol; i++) {
+      if (mols[i].Size() > 1)  chain_choosing_counter++;
+      else                     ion_choosing_counter++;
+      if (chain_choosing_counter == which_chain) {
+        chain_id = i;
+        which_chain = -2;
+      }
+      if (ion_choosing_counter == which_ion) {
+        ion_id = i;
+        which_ion = -2;
+      }
+    }
 
     // Decide move type.
     int move_type = 0;
@@ -249,37 +267,16 @@ void Simulation::TranslationalMove() {
       move_type++;
       current_move_type += move_prob[move_type];
     }
-    if (move_type >= kNoMoveType) {
-      move_type = kNoMoveType - 1;
-    }
+    if (move_type >= kNoMoveType)  move_type = kNoMoveType - 1;
   
     // If choose to move a single bead and there is one.
-    if (move_type == 0 && n_mol-n_chain > 0) {
-      int counter = -1;
-      for (int i = 0; i < n_mol; i++) {
-        if (mols[i].Size() == 1) {
-          counter++;
-        }
-        if (counter == single_id) {
-          mol_id = i;
-          break;
-        }
-      }
+    if (move_type == 0 && n_cion + n_aion + n_nion > 0) {
+      mol_id = ion_id;
       mols[mol_id].BeadTranslate(move_size, box_l, rand_gen);
     }
     // If choose to move a chain and there is one.
     else if (n_chain > 0) {
-      int counter = -1;
-      for (int i = 0; i < n_mol; i++) {
-        if (mols[i].Size() > 1) {
-          counter++;
-        }
-        if (counter == chain_id) {
-          mol_id = i;
-          break;
-        }
-      }
-
+      mol_id = chain_id;
       switch (move_type) {
         case 1:
           mols[mol_id].COMTranslate(move_size, rand_gen);
@@ -295,31 +292,39 @@ void Simulation::TranslationalMove() {
           break;
       }
     }
-    attempted[move_type]++;
-    double dE = force_field.EnergyDifference(mols, mol_id);
-    bool accept;
-    if (dE >= kVeryLargeEnergy) {
-      accept = false;
-    }
-    else {
-      accept = ((double)rand_gen() / rand_gen.max() < exp(-beta*dE));
-    }
-    force_field.FinalizeEnergies(mols, accept, mol_id);
-    // Make trial positions current positions.
-    if (accept) {
-      for (int i = 0; i < mols[mol_id].Size(); i++) {
-        mols[mol_id].bds[i].UpdateCurrentPos();   
+
+    // If a move is actually attempted.
+    if ((move_type == 0 && n_cion + n_aion + n_nion > 0) ||
+        (move_type > 0 && n_chain > 0)) {
+      double dE = 0;
+      bool accept = false;
+      attempted[move_type]++;
+      dE = force_field.EnergyDifference(mols, mol_id);
+      if (dE >= kVeryLargeEnergy) {
+        accept = false;
       }
-      accepted[move_type]++; 
-    }
-    // Set trial positions to the current positions.
-    else {
-      for (int i = 0; i < mols[mol_id].Size(); i++) {
-        mols[mol_id].bds[i].UpdateTrialPos();
+      else {
+        accept = ((double)rand_gen() / rand_gen.max() < exp(-beta*dE));
       }
-    }
-    for (int i = 0; i < mols[mol_id].Size(); i++) {
-      mols[mol_id].bds[i].UnsetMoved(); 
+
+      force_field.FinalizeEnergies(mols, accept, mol_id);
+
+      // Make trial positions current positions.
+      if (accept) {
+        for (int i = 0; i < mols[mol_id].Size(); i++) {
+          mols[mol_id].bds[i].UpdateCurrentPos();   
+        }
+        accepted[move_type]++; 
+      }
+      // Set trial positions to the current positions.
+      else {
+        for (int i = 0; i < mols[mol_id].Size(); i++) {
+          mols[mol_id].bds[i].UpdateTrialPos();
+        }
+      }
+      for (int i = 0; i < mols[mol_id].Size(); i++) {
+        mols[mol_id].bds[i].UnsetMoved(); 
+      }
     }
   }
 
@@ -336,43 +341,40 @@ void Simulation::GCMove() {
     if (accept) {
       if (step > steps_eq)  insertion_accepted++;
       for (int i = n_mol; i < (int)mols.size(); i++) {
-        int mol_len = mols[i].Size();
-        n_bead += mol_len;
-        if (mol_len > 1)  n_chain++;
-        for (int j = 0; j < mol_len; j++) {
+        for (int j = 0; j < mols[i].Size(); j++) {
           mols[i].bds[j].SetID(GenBeadID());
-          mols[i].bds[j].SetChainID(n_mol+i);
+          mols[i].bds[j].SetChainID(i);
         }
       }
-      n_mol = (int)mols.size();
       force_field.EnergyInitForAddedMolecule(mols);
     }
   }
   // Attempt deletion.
   else {
     if (step > steps_eq)  deletion_attempted++;
-    int delete_id;
-    if (n_mol == 0) {
-      delete_id = -1;
+    int deleted_chain;
+
+    // If there is no mobile pairs, there is nothing to delete.
+    if (n_mol - phantom - coion <= 0) {
+      deleted_chain = -1;
     }
     else {
-      delete_id = force_field.CBMCFChainDeletion(mols, rand_gen);
-      if (delete_id != -1) {
+      deleted_chain = force_field.CBMCFChainDeletion(mols, rand_gen);
+      if (deleted_chain >= phantom + coion) {
         if (step > steps_eq)  deletion_accepted++;
 
-        int deleted = 0;
-        for (int i = 0; i < mols[delete_id].Size(); i++)
-          deleted += (int)round(abs(mols[delete_id].bds[i].Charge()));
-        for (int i = delete_id+deleted; i >= delete_id; i--) {
-          int mol_len = mols[i].Size();
-          n_bead -= mol_len;
-          if (mol_len > 1)  n_chain--;
+        int deleted_ions = 0;
+        for (int i = 0; i < mols[deleted_chain].Size(); i++)
+          deleted_ions += (int)round(abs(mols[deleted_chain].bds[i].Charge()));
+
+        for (int i = deleted_chain + deleted_ions; i >= deleted_chain; i--) {
           mols.erase(mols.begin()+i);
         }
-        n_mol = (int)mols.size();
       }
     }
   }
+
+  UpdateMolCounts();
 
 }
 
@@ -628,7 +630,7 @@ void Simulation::ReadTop() {
 
 void Simulation::CoordinateObeyRigidBond(double rigid_bond) {
   // Maintain rigid bond length.
-  for (int i = 0; i < n_mol; i++) {
+  for (int i = phantom; i < n_mol; i++) {
     for (int j = 0; j< mols[i].Size()-1; j++) {
       double x1 = mols[i].bds[j].GetCrd(0, 0);
       double y1 = mols[i].bds[j].GetCrd(0, 1);
@@ -729,6 +731,7 @@ void Simulation::Sample() {
     //////////////
     if (force_field.UseExtPot()) {
       //force_field.CalcPressureVirialHSELSlit(mols, density_cumu/ff_avg_counter);
+      //force_field.CalcPressureForceELSlit(mols);
     }
     else {
       //force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
@@ -929,7 +932,7 @@ void Simulation::PrintLastCrd() {
         double dispx = floor(centerx/box_l[0])*box_l[0];
         double dispy = floor(centery/box_l[1])*box_l[1];
         double dispz = floor(centerz/box_l[2])*box_l[2];
-        if (i >= n_mol-phantom) {
+        if (i < phantom) {
           dispx = dispy = dispz = 0;
         }
   
@@ -962,23 +965,28 @@ void Simulation::PrintLastTop() {
     top_last_out << "Box_Length_Y: " << setprecision(18) << box_l[1] <<endl; 
     top_last_out << "Box_Length_Z: " << setprecision(18) << box_l[2] <<endl; 
     top_last_out << "bonds:" << endl; 
+    /*
     for (int i = 0; i < n_mol; i++) {
       for (int j = 0; j < (int)mols[i].bonds.size(); j++) {
         top_last_out << i << " " << mols[i].bonds[j][0] << " "
                                  << mols[i].bonds[j][1] << endl; 
       }
     }
+    */
     top_last_out << "-1" << endl; 
     top_last_out << "angles:" << endl; 
+    /*
     for (int i = 0; i < n_mol; i++) {
       for(int j = 0; j < (int)mols[i].angles.size(); j++) {
         top_last_out << i << " " << mols[i].angles[j][0] << " "
                                  << mols[i].angles[j][1] << " "
                                  << mols[i].angles[j][2] << endl; 
       }
-    }  
+    } 
+    */ 
     top_last_out << "-1" << endl; 
     top_last_out << "diheds" << endl; 
+    /*
     for (int i = 0; i < n_mol; i++) {
       for(int j = 0; j < (int)mols[i].diheds.size(); j++) {
         top_last_out << i << " " << mols[i].diheds[j][0] << " "
@@ -987,6 +995,7 @@ void Simulation::PrintLastTop() {
                                  << mols[i].diheds[j][3] << endl;
       }
     }
+    */
     top_last_out << "-1" << endl; 
 
     top_last_out.close();
@@ -995,7 +1004,7 @@ void Simulation::PrintLastTop() {
 }
 
 void Simulation::CalcRhoZ() {
-  for (int i = 0; i < n_mol; i++) {
+  for (int i = phantom; i < n_mol; i++) {
     int id;
     if (mols[i].Size() > 1)                 id = 0;
     else if (mols[i].bds[0].Charge() >= 0)  id = 1;
@@ -1038,8 +1047,10 @@ void Simulation::UpdateMolCounts() {
   n_cion = 0;
   n_aion = 0;
   n_nion = 0;
+  n_bead = phantom;  // Each phantom bead is one molecule.
 
   for (int i = phantom; i < n_mol; i++) {
+    n_bead += mols[i].Size();
     if (mols[i].Size() > 1) {
       n_chain++;
       n_chain_b += mols[i].Size();

@@ -72,6 +72,9 @@ class PotentialEwald {
   /** Get the self energy for each bead. */
   virtual double SelfEnergy(Bead&) = 0;
   // For pressure calculations.
+  virtual double PairForceZReal(Bead&, Bead&, int) = 0;
+  virtual double PairForceZRepl(Bead&, Bead&, int) = 0;
+  virtual double ForceZDipole(Bead&, double) = 0;
   virtual double PairDForceReal(Bead&, Bead&, Bead&, Bead&, int) = 0;
   virtual double PairDForceRepl(Bead&, Bead&, Bead&, Bead&, int) = 0;
   virtual double DipoleE(vector<Molecule>&) = 0;

@@ -2,7 +2,6 @@
 
 #include "../utilities/constants.h"
 
-
 double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
                                int current_len, int delete_id) {
   double energy   = 0;
@@ -82,9 +81,9 @@ double ForceField::BeadsEnergy(Bead& bead1, Bead& bead2, vector<Molecule>& mols,
 
   }
 
-  ////////////////////////////////////////////////
-  // 3. Interbead & Ewald self/dipole energies. //
-  ////////////////////////////////////////////////
+  //////////////////////////////////////////////////////
+  // 3. Inter bead pair & Ewald self/dipole energies. //
+  //////////////////////////////////////////////////////
   if (use_pair_pot && gc_bead_charge != 0) {
     pair_e += pair_pot->PairEnergy(bead1, bead2, box_l, npbc);
   }
@@ -188,20 +187,20 @@ bool ForceField::CBMCFChainInsertion(vector<Molecule>& mols,
   // Grow the 1st. //
   ///////////////////
   double xyz[3];
-  int i_index = 0;
-  int init_bead = 1;
+  int i_index = 0;  // Ion index.
+  int initial_beads = 1;
   if (gc_bead_charge != 0) {
     i_index = gc_chain_len;
-    init_bead = 2;
+    initial_beads = 2;
   }
-  for (int i = 0; i < init_bead; i++) {
+  for (int i = 0; i < initial_beads; i++) {
     for (int j = 0; j < 3; j++)
       xyz[j] = (double)rand_gen() / rand_gen.max() * box_l[j];
     cbmc_chain[i*gc_chain_len].SetAllCrd(xyz);
   }
   weight *= exp(-beta * BeadsEnergy(cbmc_chain[0], cbmc_chain[i_index], mols, 0,
                                     -1));
-  if (weight <= 0)  return accept;
+  if (weight <= 0)  return false;
 
 
   ////////////////////
@@ -241,8 +240,8 @@ bool ForceField::CBMCFChainInsertion(vector<Molecule>& mols,
   UpdateMolCounts(mols);
   int spc1;
   if      (gc_chain_len   >  1)  spc1 = n_chain;
-  else if (gc_bead_charge >= 0)  spc1 = n_cion;
-  else                           spc1 = n_aion;
+  else if (gc_bead_charge >= 0)  spc1 = n_cion - coion;
+  else                           spc1 = n_aion - coion;
   int spc2;
   if      (gc_bead_charge == 0)  spc2 = 0;
   else if (gc_bead_charge >  0)  spc2 = n_aion;
@@ -265,11 +264,12 @@ bool ForceField::CBMCFChainInsertion(vector<Molecule>& mols,
   // Decide acceptance or rejection.
   double rand_num = (double)rand_gen() / rand_gen.max();
 
-//cout << "insert: exp(beta mu) w c" << endl;
-//cout << exp(beta*chem_pot) << " " << weight << " " << C << endl;
-
   if (rand_num < (exp(beta*chem_pot) * weight) * C) {
-    accept = true; 
+    accept = true;
+    // Initialize Ewald energy.
+    if (use_ewald_pot)
+      ewald_pot->TrialChainEnergy(mols, cbmc_chain, gc_chain_len*2, -1, npbc);
+
     mols.push_back(Molecule());
     for (int i = 0; i < gc_chain_len; i++) {
       mols[(int)mols.size() - 1].AddBead(cbmc_chain[i]); 
@@ -285,10 +285,6 @@ bool ForceField::CBMCFChainInsertion(vector<Molecule>& mols,
         mols[(int)mols.size() - 1].AddBead(cbmc_chain[i]);
       }
     }
-
-    // Initialize Ewald energy.
-    if (use_ewald_pot)
-      ewald_pot->TrialChainEnergy(mols, cbmc_chain, gc_chain_len*2, -1, npbc);
   }
 
   // At this point, the new beads are added with the correct coordinates, but
@@ -302,13 +298,16 @@ int ForceField::CBMCFChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
   UpdateMolCounts(mols);
   int spc1;
   if      (gc_chain_len   >  1)  spc1 = n_chain;
-  else if (gc_bead_charge >= 0)  spc1 = n_cion;
-  else                           spc1 = n_aion;
+  else if (gc_bead_charge >= 0)  spc1 = n_cion - coion;
+  else                           spc1 = n_aion - coion;
 
-  int delete_id = floor((double)rand_gen()/rand_gen.max() * spc1);
-  if (delete_id >= (int)mols.size())  delete_id = (int)mols.size()-1;
+  int delete_id;
+  delete_id = floor((double)rand_gen()/rand_gen.max() * spc1);
+  if (delete_id >= spc1)  delete_id = spc1 - 1;
   if (gc_bead_charge != 0)
-    delete_id = delete_id * (1+gc_chain_len);
+    delete_id = phantom + coion + delete_id * (1 + gc_chain_len);
+  else
+    delete_id = phantom + coion + delete_id;
 
   int second_bead = 0;
   if (gc_bead_charge != 0)  second_bead = 1;
@@ -384,9 +383,6 @@ int ForceField::CBMCFChainDeletion(vector<Molecule>& mols, mt19937& rand_gen) {
   double C = lam_over_vol * (double)factorial;
   double rand_num = (double)rand_gen() / rand_gen.max();
 
-//cout << "delete: 1/exp(beta mu) 1/w c w" << endl;
-//cout << 1.0/exp(beta*chem_pot) << " " << 1.0/weight << " " << C << " " << weight << endl;
-
   if (rand_num < C / (exp(beta*chem_pot) * weight)) {
     if (use_pair_pot) {
       pair_pot->AdjustEnergyUponMolDeletion(mols, delete_id); 
@@ -414,8 +410,8 @@ double ForceField::CalcChemicalPotentialF(vector<Molecule>& mols,
 
   int spc1;
   if      (gc_chain_len   >  1)  spc1 = n_chain;
-  else if (gc_bead_charge >= 0)  spc1 = n_cion;
-  else                           spc1 = n_aion;
+  else if (gc_bead_charge >= 0)  spc1 = n_cion - coion;
+  else                           spc1 = n_aion - coion;
   int spc2;
   if      (gc_bead_charge == 0)  spc2 = 0;
   else if (gc_bead_charge >  0)  spc2 = n_aion;
@@ -444,12 +440,12 @@ double ForceField::CalcChemicalPotentialF(vector<Molecule>& mols,
     // First beads.
     double xyz[3];
     int i_index = 0;
-    int init_bead = 1;
+    int initial_beads = 1;
     if (gc_bead_charge != 0) {
       i_index = gc_chain_len;
-      init_bead = 2;
+      initial_beads = 2;
     }
-    for (int i = 0; i < init_bead; i++) {
+    for (int i = 0; i < initial_beads; i++) {
       for (int j = 0; j < 3; j++)
         xyz[j] = (double)rand_gen() / rand_gen.max() * box_l[j];
       cbmc_chain[i*gc_chain_len].SetAllCrd(xyz);

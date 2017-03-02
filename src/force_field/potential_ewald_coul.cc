@@ -167,6 +167,67 @@ double PotentialEwaldCoul::SelfEnergy(Bead& bead) {
 
 }
 
+// [[[Note]]]: This function should only be used on the point charges on wall z=0!!!
+double PotentialEwaldCoul::PairForceZReal(Bead& bead1, Bead& bead2, int npbc) {
+  double force_z = 0;
+  double dist[3];
+  GetDistVector(bead2, bead1, box_l, npbc, dist);
+  double q1 = bead1.Charge();
+  double q2 = bead2.Charge();
+  double prefactor = lB*q1*q2;
+  double prefactor2 = 2*sqrt(alpha/kPi);
+
+  for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
+    for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
+      for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
+        double r_vec[3];
+        r_vec[0] = dist[0] + i*box_l[0];
+        r_vec[1] = dist[1] + j*box_l[1];
+        r_vec[2] = dist[2] + k*box_l[2];
+        double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
+        if (r > 0 && r <= real_cutoff) {
+          force_z += prefactor * ((prefactor2*exp(-alpha*r*r))
+                     + (erfc(sqrt(alpha)*r)/r)) * r_vec[2]/(r*r);
+        }
+      }
+    }
+  }
+
+  return force_z;
+
+}
+
+// [[[Note]]]: This function should only be used on the point charges on wall z=0!!!
+double PotentialEwaldCoul::PairForceZRepl(Bead& bead1, Bead& bead2, int npbc) {
+  double force_z = 0;
+  double r[3];
+  GetDistVector(bead2, bead1, box_l, npbc, r);
+  double q1 = bead1.Charge();
+  double q2 = bead2.Charge();
+  double prefactor = lB * 4*kPi * q1*q2/box_vol;
+
+  for (int lx = 0; lx < repl_ceto[0]; lx++) {
+    for (int ly = 0; ly < repl_ceto[1]; ly++) {
+      for (int lz = 0; lz < repl_ceto[2]; lz++) {
+        int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
+        if (k2[idx] > 0 && k2[idx] <= repl_cutoff) {
+          force_z += prefactor * kz[lz]*ek2[idx]  
+                     * sin(kx[lx]*r[0] + ky[ly]*r[1] + kz[lz]*r[2]);
+        }
+      }
+    }
+  }
+
+  return force_z;
+
+}
+
+// [[[Note]]]: This function should only be used on the point charges on wall z=0!!!
+double PotentialEwaldCoul::ForceZDipole(Bead& bead, double dipole_z) {
+  return -lB * 4*kPi*bead.Charge()*dipole_z/box_vol;
+
+}
+
 // For pressure calculation.
 double PotentialEwaldCoul::PairDForceReal(Bead& bead1, Bead& bead2,
                                           Bead& bead1_ref, Bead& bead2_ref,
@@ -261,7 +322,7 @@ double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols) {
       Mz += c*z;
     }
   }
-  return - lB * 2*kPi/box_vol * Mz * Mz;
+  return lB * 2*kPi/box_vol * Mz * Mz;
 
 }
 
@@ -283,15 +344,17 @@ double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols,
     Mz += c*z;
   }
 
-  return - lB * 2*kPi/box_vol * Mz * Mz;
+  return lB * 2*kPi/box_vol * Mz * Mz;
 
 }
 
+// The dipole energy without the deleted molecule.
+// Here, the delete_id should be >= 0.
 double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols, int delete_id,
                                    int counterion) {
   double Mz = 0;
   for (int i = 0; i < (int)mols.size(); i++) {
-    if (i < delete_id && i > delete_id+counterion) {
+    if (i < delete_id || i > delete_id+counterion) {
       for (int j = 0; j < mols[i].Size(); j++) {
         // If the simulation is done correctly, the z coordinates should all be
         // within the unit cell.
@@ -301,10 +364,11 @@ double PotentialEwaldCoul::DipoleE(vector<Molecule>& mols, int delete_id,
       }
     }
   }
-  return - lB * 2*kPi/box_vol * Mz * Mz;
+  return lB * 2*kPi/box_vol * Mz * Mz;
 
 }
 
+// The dipole energy difference before and after the +/- bead pair is added.
 double PotentialEwaldCoul::DipoleEDiff(vector<Molecule>& mols,
                                        vector<Bead>& cbmc_chain,
                                        Bead& bead1, Bead& bead2, 
@@ -318,7 +382,7 @@ double PotentialEwaldCoul::DipoleEDiff(vector<Molecule>& mols,
   // Mols.
   if (delete_id >= 0) {
     for (int i = 0; i < (int)mols.size(); i++) {
-      if (i < delete_id && i > delete_id+counterion) {
+      if (i < delete_id || i > delete_id+counterion) {
         for (int j = 0; j < mols[i].Size(); j++) {
           double z = mols[i].bds[j].GetCrd(0, 2);
           double c = mols[i].bds[j].Charge();
@@ -360,7 +424,7 @@ double PotentialEwaldCoul::DipoleEDiff(vector<Molecule>& mols,
     Mz_n += c*z;
   }
 
-  return - lB * 2*kPi/box_vol * (Mz_n*Mz_n - Mz_o*Mz_o);
+  return lB * 2*kPi/box_vol * (Mz_n*Mz_n - Mz_o*Mz_o);
 
 }
 
