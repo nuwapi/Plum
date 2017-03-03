@@ -1,2 +1,3 @@
 # Plum
-A polymer Monte Carlo simulation package
+
+!!! >>> Documentation and example runs will be added to this repository soon.
