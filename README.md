@@ -47,7 +47,7 @@ And then change line
 INC=-I /home/nuowang/bin/eigen-3.2.8
 ```
 
-in the Makefile in `your_path_to_plum/plum/src` to
+in `your_path_to_plum/plum/src/Makefile` to
 
 ```
 INC=-I your_path_to_eigen/eigen_x.x.x
