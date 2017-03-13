@@ -1,11 +1,14 @@
 # Plum
 
-Plum is a Monte Carlo simulation package for polymers. Currently, Plum contains the following features:
-* Bulk and z-direction confined simulations.
-* Grand-canonical ensemble simulation.
-* Configurational-bias chain insertion and deletion.
+Plum is a Monte Carlo simulation package for polymers. Currently, Plum contains the following special features:
+* Grand-canonical ensemble simulation with configurational-bias chain insertion and deletion.
+* Confined simulations.(periodic only along x and y directions)
+..* dsdfdddddd
+* Confined simulations.(periodic only along x and y directions)
+
+Other 
 * Ewald summation for electrostatics calculations.
-* Allowing arbitrary surface charged site and Lennard-Jones site arrangements.
+* Arbitrary surface charged site and Lennard-Jones site arrangements in confined simulations.
 * Every monomer/bead can be assigned its own charge and Lennard-Jones parameters.
 
 ## Getting Started
@@ -58,19 +61,9 @@ Explain what these tests test and why
 Give an example
 ```
 
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
 ## Contributing
 
-Currently, we have not set up rules for submitting pull requests. Please directly contact [the developer](https://github.com/nuowang) if you would like to contribute.
+Currently, we have not set up the rules for submitting pull requests. Please directly contact [the developer](https://github.com/nuowang) if you would like to contribute.
 
 ## Authors
 
