@@ -1,6 +1,8 @@
-# Project Title
+# Plum
 
-One Paragraph of project description goes here
+Plum is a Monte Carlo simulation package for polymers, currently Plum is capable of:
+* a
+* b
 
 ## Getting Started
 
