@@ -30,6 +30,8 @@ Plum uses free C++ library Eigen and requires the Eigen during compilation. Befo
 
 ### Installing
 
+`<addr>`sdvsd
+
 Download the entire [src](src) directory from the Plum repository, store in *your_path_to_plum/plum*. Change line
 
 ```
