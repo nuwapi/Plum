@@ -30,17 +30,16 @@ Plum uses free C++ library Eigen and requires the Eigen during compilation. Befo
 
 ### Installing
 
-Download the [src](src) directory from the Plum repository, store in yourpath/plum
-Say what the step will be
+Download the entire [src](src) directory from the Plum repository, store in *your_path_to_plum/plum*. Change line
 
 ```
-Give the example
+INC=-I /home/nuowang/bin/eigen-3.2.8
 ```
 
-And repeat
+in the Makefile in *your_path_to_plum/plum/src* to
 
 ```
-until finished
+INC=-I your_path_to_eigen/eigen_x.x.x
 ```
 
 End with an example of getting some data out of the system or using it for a little demo
