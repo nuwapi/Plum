@@ -23,15 +23,11 @@ Last, we would like to implement the following features in Plum in the near futu
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions explain how to compile Plum on your local machine. Examples are also provided to help you get started with your own project using Plum.
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
-
-```
-Give examples
-```
+Plum uses C++ library Eigen and requires the Eigen during compilation. Before compiling Plum, [download Eigen](eigen.tuxfamily.org/) and decompress to your local path.
 
 ### Installing
 
