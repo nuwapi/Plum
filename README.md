@@ -70,7 +70,7 @@ Add additional notes about how to deploy this on a live system
 
 ## Contributing
 
-Currently, we have not set up rules for submitting pull requests. Please directly contact the [author](https://github.com/nuowang) if you would like to contribute.
+Currently, we have not set up rules for submitting pull requests. Please directly contact [the developer](https://github.com/nuowang) if you would like to contribute.
 
 ## Authors
 
