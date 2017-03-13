@@ -84,9 +84,10 @@ See also the list of [contributors](https://github.com/your/project/contributors
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+Plum is licensed under the MIT License, see the [LICENSE.md](LICENSE.md) file for details.
 
 ## Acknowledgments
 
 * Dr. Pengfei Zhang for his guidance, suggestions and help in code validation.
 * Rachel Krueger for writing up the initial framework of what became Plum.
+* Dow Chemical Co. for funding the research projects for which the code was written.
