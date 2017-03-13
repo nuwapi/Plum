@@ -59,7 +59,7 @@ INC=-I your_path_to_eigen/eigen_x.x.x
 make
 ```
 
-and you will find the binary executable `plum` uner `your_path_to_plum/plum/bin`
+and you will find the binary executable `plum` under `your_path_to_plum/plum/bin`
 
 ## Running the tests
 
