@@ -15,7 +15,7 @@ Plum also contains the following **special features**:
   * Uniform surface Lennard-Jones potential.
 * Osmotic pressure calculations for both bulk and confined systems.
 
-We would like to implement the following features in Plum in the near future:
+Last, we would like to implement the following features in Plum in the near future:
 * The routines to calculate angle and dihedral angle energies and forces.
 * The routines to simulate arbitrarily branched polymers.
 * The routines to handle arbitrarily grafted polymers on the confining surfaces.
