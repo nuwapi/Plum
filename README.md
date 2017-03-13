@@ -53,13 +53,13 @@ in `your_path_to_plum/plum/src/Makefile` to
 INC=-I your_path_to_eigen/eigen_x.x.x
 ```
 
-`x.x.x` represents the version of Eigen that you are using. Last
+"x.x.x" represents the version of Eigen that you are using. Last
 
 ```
 make
 ```
 
-and you will find the binary executable file `plum` uner `your_path_to_plum/plum/bin`
+and you will find the binary executable `plum` uner `your_path_to_plum/plum/bin`
 
 ## Running the tests
 
