@@ -20,19 +20,17 @@ Last, we would like to implement the following features in Plum in the near futu
 * The routines to simulate arbitrarily branched polymers.
 * The routines to handle arbitrarily grafted polymers on the confining surfaces.
 
-
 ## Getting Started
 
 These instructions explain how to compile Plum on your local machine. Examples are also provided to help you get started with your own project using Plum.
 
 ### Prerequisites
 
-Plum uses C++ library Eigen and requires the Eigen during compilation. Before compiling Plum, [download Eigen](eigen.tuxfamily.org/) and decompress to your local path.
+Plum uses free C++ library Eigen and requires the Eigen during compilation. Before compiling Plum, [download Eigen](https://eigen.tuxfamily.org/) and decompress it to your local directory.
 
 ### Installing
 
-A step by step series of examples that tell you have to get a development env running
-
+Download the [src](src) directory from the Plum repository, store in yourpath/plum
 Say what the step will be
 
 ```
