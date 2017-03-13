@@ -24,15 +24,24 @@ Last, we would like to implement the following features in Plum in the near futu
 
 These instructions explain how to compile Plum on your local machine. Examples are also provided to help you get started with your own project using Plum.
 
+Note that this guide is for the Linux environment only, but it should also apply to the Mac OS terminal and Xcode.
+
 ### Prerequisites
 
-Plum uses free C++ library Eigen and requires the Eigen during compilation. Before compiling Plum, [download Eigen](https://eigen.tuxfamily.org/) and decompress it to your local directory.
+Plum uses free C++ library Eigen and requires Eigen during compilation. Before compiling Plum, [download Eigen](https://eigen.tuxfamily.org/) and decompress it to your local directory. Plum has been tested to work with Eigen version 3.2.8.
 
-### Installing
+You should also make sure that `<cmake>` and `<gcc>` are installed on your machine.
 
-`<addr>`sdvsd
+### Installation
 
-Download the entire [src](src) directory from the Plum repository, store in *your_path_to_plum/plum*. Change line
+Download the entire [src](src) directory from the Plum repository, store in `<your_path_to_plum/plum>`. Do
+
+```
+cd your_path_to_plum/plum
+mkdir bin
+```
+
+And then change line
 
 ```
 INC=-I /home/nuowang/bin/eigen-3.2.8
@@ -44,7 +53,13 @@ in the Makefile in *your_path_to_plum/plum/src* to
 INC=-I your_path_to_eigen/eigen_x.x.x
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+`<x.x.x>` represents the version of Eigen that you are using. Last
+
+```
+make
+```
+
+and you will find the binary executable file `<plum>` uner `<your_path_to_plum/plum/bin>`
 
 ## Running the tests
 
