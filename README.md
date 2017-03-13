@@ -84,7 +84,7 @@ See also the list of [contributors](https://github.com/your/project/contributors
 
 ## License
 
-Plum is licensed under the MIT License, see the [LICENSE.md](LICENSE.md) file for details.
+Plum is licensed under the MIT License, see [LICENSE.md](LICENSE.md) for details.
 
 ## Acknowledgments
 
