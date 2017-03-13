@@ -1,6 +1,6 @@
 # Plum
 
-Plum is a Monte Carlo simulation package for polymers. The **main features** of Plum are:
+Plum is a [Monte Carlo simulation](https://en.wikipedia.org/wiki/Monte_Carlo_method) package for [polymers](https://en.wikipedia.org/wiki/Polymer). The **main features** of Plum are:
 * Ewald summation for electrostatics calculations.
 * Arbitrary surface charged site and Lennard-Jones site arrangements in confined simulations.
 * Every monomer/bead can be assigned its own charge and Lennard-Jones parameters.
