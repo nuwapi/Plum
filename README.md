@@ -70,18 +70,12 @@ Add additional notes about how to deploy this on a live system
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+Currently, we have not set up rules for submitting pull requests. Please directly contact the [author](https://github.com/nuowang) if you would like to contribute.
 
 ## Authors
 
 * **Nuo Wang** - The current developer of Plum, who wrote most of the functionalities in the current version of the code.
 * **Rachel Krueger** - The inital framework, named OOPS, of the code.
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
 ## License
 
