@@ -88,6 +88,5 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Acknowledgments
 
-* Hat tip to anyone who's code was used
-* Inspiration
-* etc
+* Dr. Pengfei Zhang for his guidance, suggestions and help in code validation.
+* Rachel Krueger for writing up the initial framework of what became Plum.
