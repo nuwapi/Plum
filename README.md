@@ -4,11 +4,13 @@ Plum is a Monte Carlo simulation package for polymers. The main features of Plum
 * Ewald summation for electrostatics calculations.
 * Arbitrary surface charged site and Lennard-Jones site arrangements in confined simulations.
 * Every monomer/bead can be assigned its own charge and Lennard-Jones parameters.
+
 Plum also contains the following special features:
 * Grand-canonical ensemble simulation with configurational-bias chain insertion and deletion.
 * Confined simulations.(periodic only along x and y directions)
   * dsdfdddddd
 * Osmotic pressure calculations for both bulk and confined systems.
+
 Last, we would like to implement the following features in Plum in the future:
 * The routines to simulate arbitrarily branched polymers.
 * The routines for calculating angle and dihedral angle energies and forces.
