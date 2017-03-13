@@ -3,7 +3,7 @@
 Plum is a Monte Carlo simulation package for polymers. Currently, Plum contains the following special features:
 * Grand-canonical ensemble simulation with configurational-bias chain insertion and deletion.
 * Confined simulations.(periodic only along x and y directions)
-..* dsdfdddddd
+  * dsdfdddddd
 * Confined simulations.(periodic only along x and y directions)
 
 Other 
@@ -67,8 +67,8 @@ Currently, we have not set up the rules for submitting pull requests. Please dir
 
 ## Authors
 
-* **Nuo Wang** - The current developer of Plum, who wrote most of the functionalities in the current version of the code.
-* **Rachel Krueger** - The inital framework, named OOPS, of the code.
+* **Nuo Wang** - The current developer of Plum responsible for most of the functionalities in the current version of the code.
+* **Rachel Krueger** - The inital framework of the code.
 
 ## License
 
@@ -77,5 +77,5 @@ Plum is licensed under the MIT License, see [LICENSE.md](LICENSE.md) for details
 ## Acknowledgments
 
 * Dr. Pengfei Zhang for his guidance, suggestions and help in code validation.
-* Rachel Krueger for writing up the initial framework of what became Plum.
+* Rachel Krueger for creating the initial framework of what became Plum.
 * Dow Chemical Co. for funding the research projects for which Plum was written.
