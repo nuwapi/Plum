@@ -78,7 +78,8 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Nuo Wang** - The current developer of Plum, who wrote most of the functionalities in the current version of the code.
+* **Rachel Krueger** - The inital framework, named OOPS, of the code.
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
