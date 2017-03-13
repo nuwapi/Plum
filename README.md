@@ -90,4 +90,4 @@ Plum is licensed under the MIT License, see the [LICENSE.md](LICENSE.md) file fo
 
 * Dr. Pengfei Zhang for his guidance, suggestions and help in code validation.
 * Rachel Krueger for writing up the initial framework of what became Plum.
-* Dow Chemical Co. for funding the research projects for which the code was written.
+* Dow Chemical Co. for funding the research projects for which Plum was written.
