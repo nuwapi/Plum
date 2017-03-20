@@ -1,0 +1,103 @@
+ 
+     _ _       
+   /. ' \  ----=>> Plum ver1.0 <<=----
+  | ~^ ^~| ---=>> Nuo Wang 2016 <<=---
+   \__\_/  
+
+  All energies are in kBT.
+  All lengths are in unit length (ul).
+
+  Starting program!
+  General simulation parameters.
+     Input coordinate file       : input_crd.dat
+     Input topology file         : input_top.dat
+     Prefix of output file names : output
+     Total simulation steps      : 10000
+     Equilibrium steps           : 100
+     Sampling frequency          : 100
+     Statistics output frequency : 100
+     Trajectory output frequency : 100
+     Number of dimension of PBC  : 2
+     MC move size (ul)           : 2
+     beta (1/kBT)                : 1
+     Calculate chemical pot?     : no
+     Number of phantom molecules : 18
+     Number of coions            : 18
+     p(bead translation move)    : 0.9
+     p(pol COM translation move) : 0.02
+     p(pol pivot move)           : 0.04
+     p(pol crankshaft move)      : 0
+     p(pol random reptation move): 0.04
+  Force field parameters.
+     [P] g(r) bin resolution (ul): 10
+     [P] Hard sphere size (ul)   : 2.5
+     Use pair potential?         : yes
+     Use Ewald sum potential?    : yes
+     Use bond potential?         : no
+     Use rigid bond?             : yes
+     Use angle potential?        : no
+     Use dihedral potential?     : no
+     Use external potential?     : yes
+     Use grand canonical MC?     : yes
+     [GC] Chemical pot (kBT)     : -90
+     [GC] de Broglie wavelength^3: 1
+     [GC] GCMC move frequency    : 10
+     [GC] CBMC chain length      : 8
+     [GC] CBMC bead charge (e)   : -1
+     [GC] CBMC bead type         : P
+     [GC] CBMC trials            : 30
+     [PP] Pair potential type    : Truncated LJ
+     [PP] Sigma for bead type    : P - 2.5
+     [PP] Epsilon for bead type  : P - 0.1
+     [PP] Sigma for bead type    : C - 2.5
+     [PP] Epsilon for bead type  : C - 0.1
+     [PP] Sigma for bead type    : Z - 2.5
+     [PP] Epsilon for bead type  : Z - 0
+     [EP] Ewald potential type   : Coul
+     [EP] Bjerrum length (ul)    : 2.5
+     [EP] Dielectric constant    : 80
+     [EP] Derived kBT in J*A/ul  : 1.15354e-20
+     [EP] Derived T K*A/ul       : 835.505
+     [EP] Ewald alpha (ul^-2)    : 0.01
+     [EP] Real space cutoff (ul) : 34
+     [EP] (cell sum number)      : 1
+     [EP] k space cutoff (ul^-2) : 0.36
+     [EP] (k sum number)         : 9
+     [EP] Use dipole correction? : yes
+     [RB] Rigid bond length      : 2.5A
+     [eP] External potential type: Truncated LJ wall
+     [eP] LJ cutoff              : -1
+     [eP] Sigma for wall         : 1.25
+     [eP] Epsilon for wall       : 0.1
+     [eP] Sigma for bead type    : P - 1.25
+     [eP] Epsilon for bead type  : P - 0.1
+     [eP] Sigma for bead type    : C - 1.25
+     [eP] Epsilon for bead type  : C - 0.1
+     [eP] Sigma for bead type    : Z - 1.25
+     [eP] Epsilon for bead type  : Z - 0
+  Note: Currently, pressure cannot be calculated
+        correctly for all combinations of "hard" and
+        "soft" potentials.
+  Note: For the hard sphere part of the virial pressure
+        calculation to be correct, the virial sphere
+        size should be consistent with the bead sizes
+        given to the "rigid bond",  the "hard sphere
+        potential" and the "hard wall potential"
+  Note: [!!!] If a wall confining potential is used, the
+        z-length of the simulation box needs to be 3 to
+        5 times wider than the confinement for the
+        electrostatics calculation to be correct!
+  Initialized pair potential.
+  Initialized Ewald potential.
+  Initialized external potential.
+  The random number seed is: 4163774853
+  Warning: There is no chain in the system but the chain
+           MC move(s) is requested!
+  Note: [!!!] 18 phantom beads are used. Check
+        if they are used with the appropriate parameters!
+        Their bead type should have < 0 radius and their
+        coordinates should appear at the BEGINING of the
+        input coordiante file.
+  END.
+
+  Simulation complete.
