@@ -24,42 +24,40 @@ In the near future, we would also like to implement the following features in Pl
 
 The following instructions explain how to compile Plum on your local machine. [Example](examples) Plum simulations are also provided to help you get started with your own project using Plum.
 
-Note that this guide is for the Linux environment only, but it should also apply to the Mac OS terminal and Xcode.
+Note that this guide is written for the Linux working environment, but it should also apply to the Mac OS terminal and Xcode.
 
 ### Prerequisites
 
-Plum uses free C++ library Eigen and requires Eigen during compilation. Before compiling Plum, [download Eigen](https://eigen.tuxfamily.org/) and decompress it to your local directory. Plum has been tested to work with Eigen version 3.2.8.
+Plum uses free C++ library Eigen and requires Eigen during compilation. Before compiling Plum, [download Eigen](https://eigen.tuxfamily.org/) and decompress it to your local directory. Currently, Plum has only been tested with Eigen version 3.2.8, please let me know if you run into compilation issues using the newer versions of Eigen.
 
-You should also make sure that `cmake` and `gcc` are installed on your machine.
+You should also make sure that `cmake` and `gcc` are installed properly on your machine.
 
 ### Installation
 
-Download the entire [src](src) directory from the Plum repository, store in `your_path_to_plum/plum`. Do
+Download the entire [src](src) directory to your local path `your_path_to_plum/plum` and make a `bin` directory under it:
 
 ```
 cd your_path_to_plum/plum
 mkdir bin
 ```
 
-And then change line
-
+Find the Makefile under `your_path_to_plum/plum/src/Makefile` and change the following line
 ```
 INC=-I /home/nuowang/bin/eigen-3.2.8
 ```
 
-in `your_path_to_plum/plum/src/Makefile` to
+to
 
 ```
 INC=-I your_path_to_eigen/eigen_x.x.x
 ```
 
-"x.x.x" represents the version of Eigen that you are using. Last
+Here, "x.x.x" represents the version of Eigen that you are using. Now, simply `make` to generate the Plum binary under `your_path_to_plum/plum/bin`.
 
 ```
+cd your_path_to_plum/plum/src
 make
 ```
-
-and you will find the binary executable `plum` under `your_path_to_plum/plum/bin`
 
 ## Runing examples
 
