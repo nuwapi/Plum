@@ -1,28 +1,28 @@
 # Plum
 
-Plum is a [Monte Carlo simulation](https://en.wikipedia.org/wiki/Monte_Carlo_method) package for [polymers](https://en.wikipedia.org/wiki/Polymer). The **common features** of Plum are:
-* Canonical Monte Carlo simulations for arbitrary linear polymer-small ion systems.
+Plum is a [Monte Carlo simulation](https://en.wikipedia.org/wiki/Monte_Carlo_method) package for [polymers](https://en.wikipedia.org/wiki/Polymer). Plum contains many of the **common features** in typical Monte Carlo packges:
+* Canonical ensemble Monte Carlo simulations for arbitrary linear polymer-small ion systems.
 * Lennard-Jones, electrostatics and bond interactions between atoms/beads.
 * Ewald summation for electrostatics calculations.
 * Flexible atom/bead parameter settings using bead type and bead partial charge.
-* Pivot, crankshaft, replation and center of mass translation moves for the polymers.
+* Pivot, crankshaft, replation and center of mass translation Monte Carlo moves for the polymers.
 
 Plum also contains the following **special features**:
 * Grand-canonical ensemble simulation with configurational-bias chain insertion and deletion.
 * Confined simulations between two infinite surfaces that are periodic along x and y directions.
   * End-grafted polymer brush simulations.
-  * Arbitrary surface interaction sites, charged and/or Lennard-Jones.
+  * Arbitrary distribution surface interaction sites, charged and/or Lennard-Jones.
   * Uniform surface Lennard-Jones potential.
 * Osmotic pressure calculations for both bulk and confined systems.
 
-Last, we would like to implement the following features in Plum in the near future:
+In the near future, we would also like to implement the following features in Plum:
 * The routines to calculate angle and dihedral angle energies and forces.
 * The routines to simulate arbitrarily branched polymers.
 * The routines to handle arbitrarily grafted polymers on the confining surfaces.
 
 ## Getting Started
 
-These instructions explain how to compile Plum on your local machine. Examples are also provided to help you get started with your own project using Plum.
+The following instructions explain how to compile Plum on your local machine. [Example](examples) Plum simulations are also provided to help you get started with your own project using Plum.
 
 Note that this guide is for the Linux environment only, but it should also apply to the Mac OS terminal and Xcode.
 
