@@ -61,25 +61,9 @@ make
 
 and you will find the binary executable `plum` under `your_path_to_plum/plum/bin`
 
-## Running the tests
+## Runing examples
 
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
+You will find 3 example inputs in directory `example`.
 
 ## Contributing
 
@@ -87,7 +71,7 @@ Currently, we have not set up the rules for submitting pull requests. Please dir
 
 ## Authors
 
-* **Nuo Wang** - The current developer of Plum responsible for most of the functionalities in the current version of the code.
+* **Nuo Wang** - The current developer of Plum, responsible for most of the functionalities in the current version of the code.
 * **Rachel Krueger** - The inital framework of the code.
 
 ## License
