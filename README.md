@@ -34,7 +34,7 @@ You should also make sure that `cmake` and `gcc` are installed on your machine.
 
 ### Installation
 
-Download the entire `[src](src)` directory from the Plum repository, store in `your_path_to_plum/plum`. Do
+Download the entire [src](src) directory from the Plum repository, store in `your_path_to_plum/plum`. Do
 
 ```
 cd your_path_to_plum/plum
@@ -63,7 +63,7 @@ and you will find the binary executable `plum` under `your_path_to_plum/plum/bin
 
 ## Runing examples
 
-You will find 4 example simulation runs in the `examples` directory. Run each example by
+You will find 4 example simulation runs in the [examples](examples) directory. Run each example by
 
 ```
 your_path_to_plum/bin/plum < run.in > run.log 
