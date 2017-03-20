@@ -170,92 +170,6 @@ void ForceField::CalcPressureVirialHSELSlit(vector<Molecule>& mols,
 
 }
 
-void ForceField::CalcPressureForceELSlit(vector<Molecule>& mols) {
-  vp_z++;
-
-  /*
-  // Assume that the two plates carry the same number of point charges.
-  // Then the number of point charges on plate z=0 is:
-  int phantom_z0 = phantom/2;
-  // The number of point charges to use in the pressure sampling. Anywhere
-  // between 1 and phantom_z0.
-  int phantom_use = phantom_z0;
-  double area = box_l[0]*box_l[1] / (double)phantom_z0;
-
-  // Calculating dipole moment.
-  double dipole_z = 0;
-  for (int i = 0; i < (int)mols.size(); i++) {
-    for (int j = 0; j < mols[i].Size(); j++) {
-      dipole_z += mols[i].bds[j].Charge() * mols[i].bds[j].GetCrd(0,2);
-    }
-  }
-
-  for (int i = 0; i < phantom_use; i++) {
-    for (int j = phantom_z0; j < (int)mols.size(); j++) {
-      for (int k = 0; k < mols[j].Size(); k++) {
-        double p_real = 0;
-        double p_repl = 0;
-        if (use_ewald_pot) {
-          p_real = ewald_pot->PairForceZReal(mols[i].bds[0], mols[j].bds[k], npbc) /
-                   area;
-          p_repl = ewald_pot->PairForceZRepl(mols[i].bds[0], mols[j].bds[k], npbc) /
-                   area;
-        }
-        // Plate 2.
-        if (j < phantom)
-          p_tensor_el[3] += p_real + p_repl;
-        // Polymer.
-        else if (mols[j].Size() > 1)
-          p_tensor_el[0] += p_real + p_repl;
-        // Cation.
-        else if (mols[j].bds[0].Charge() > 0)
-          p_tensor_el[1] += p_real + p_repl;
-        // Anion.
-        else if (mols[j].bds[0].Charge() < 0)
-          p_tensor_el[2] += p_real + p_repl;
-      }
-    }
-    if (use_ewald_pot) {
-      // Dipole correction contribution.
-      p_tensor_el[4] += ewald_pot->ForceZDipole(mols[i].bds[0], dipole_z) / area;
-    }
-  }
-
-  // !!! Alternative mapping:
-  >// p_tensor[0] is polymer elec contribution.
-  // p_tensor[1] is cation elec contribution.
-  // p_tensor[2] is anion elec contribution.
-  // p_tensor[3] is plate 2 elec contribution.
-  // p_tensor[4] is dipole correction contribution.
-  // p_tensor[5] is total.
-  p_tensor[0] = p_tensor_el[0] / (vp_z*phantom_use);
-  p_tensor[1] = p_tensor_el[1] / (vp_z*phantom_use);
-  p_tensor[2] = p_tensor_el[2] / (vp_z*phantom_use);
-  p_tensor[3] = p_tensor_el[3] / (vp_z*phantom_use);
-  p_tensor[4] = p_tensor_el[4] / (vp_z*phantom_use);
-  p_tensor[5] = p_tensor[0] + p_tensor[1] + p_tensor[2] + p_tensor[3] +
-                p_tensor[4];
-  */
-
-  double total_force = 0;
-  double area = box_l[0] * box_l[1];
-  for (int i = 0; i < (int)mols.size(); i++) {
-    for (int j = 0; j < mols[i].Size(); j++) {
-      for (int k = i; k < (int)mols.size(); k++) {
-        for (int l = 0; l < mols[k].Size(); l++) {
-          if (k > i || (k == i && l >= j)) {
-            total_force += ewald_pot->PairForceZReal(mols[i].bds[j], mols[k].bds[l], npbc);
-            total_force += ewald_pot->PairForceZRepl(mols[i].bds[j], mols[k].bds[l], npbc);
-          }
-        }
-      }
-    }
-  }
-  p_tensor_el[0] += total_force / area;
-  p_tensor[0] = p_tensor_el[0] / vp_z;
-
-}
-
 /*
  * ID codes: 0 - cation, 1 - anion, 2 - polymer, 3 - surface.
  * p_tensor[0]: average Yethiraj total total.
@@ -466,6 +380,83 @@ void ForceField::CalcPressureVolScalingHSELSlit(vector<Molecule>& mols) {
   p_tensor[1] = beta/(box_l[0]*box_l[1]*dz)*log(p_tensor[3]/vp_z);
 
   delete [] d_com_z;
+
+}
+
+// Currently, the force calculation only outputs the total LJ force and the
+// total Ewald force. One could further categorize the force contributions by
+// molecular species.
+// p_tensor[0]: The ensemble average of LJ contribution.
+// p_tensor[1]: The ensemble average of Ewald contribution.
+// p_tensor[2]: Cumulative LJ contribution.
+// p_tensor[3]: Cumulative Ewald contribution.
+void ForceField::CalcPressureForceLJELSlit(vector<Molecule>& mols) {
+  /////////////////////////////////////////
+  // 1. Preparation.                     //
+  /////////////////////////////////////////
+  // The "partition function".
+  vp_z++;
+  // Calculate dipole moment in z direction.
+  double dipole_z = 0;
+  for (int i = 0; i < (int)mols.size(); i++) {
+    for (int j = 0; j < mols[i].Size(); j++) {
+      double q = mols[i].bds[j].Charge();
+      double z = mols[i].bds[j].GetCrd(0, 2);
+      dipole_z += q*z;
+    }
+  }
+  
+  /////////////////////////////////////////
+  // 2. Calculate forces.                //
+  /////////////////////////////////////////
+  // Between the plates and the system.
+  // ..Site-site LJ and Ewald.
+  // ....This requires the two plates to have the same number of sites, and the
+  // ....coordinate file stores all of the sites on one plate first then the
+  // ....sites on the other plate.
+  for (int i = 0; i < phantom; i++) {
+    for (int j = phantom/2; j < (int)mols.size(); j++) {
+      for (int k = 0; k < mols[j].Size(); k++) {
+        double C = -1;
+        // Wall z=0 and the system.
+        if (i < phantom/2 && j >= phantom)    C = -0.5;
+        // Wall z=box_l[2] and the system.
+        else if (i < phantom && j >= phantom) C = 0.5;
+        // Wall z=0 and wall z=box_l[2].
+        else                                  C = -1;
+
+        if (use_pair_pot && (i < phantom/2 || j >= phantom)) {
+          double r[3];
+          // This vector will point towards mols[i].bds[0].
+          GetDistVector(mols[j].bds[k], mols[i].bds[0], box_l, npbc, r);
+          double z_component = r[2]/sqrt(r[0]*r[0]+r[1]*r[1]+r[2]*r[2]);
+          p_tensor[2] += C * z_component * pair_pot->PairForce(mols[j].bds[k],
+                         mols[i].bds[0], box_l, npbc);
+        }
+        if (use_ewald_pot && (i < phantom/2 || j >= phantom)) {
+          // The first argument has to be the wall particle.
+          p_tensor[3] += C * ewald_pot->PairForceZReal(mols[i].bds[0],
+                         mols[j].bds[k], npbc);
+          p_tensor[3] += C * ewald_pot->PairForceZRepl(mols[i].bds[0],
+                         mols[j].bds[k], npbc);
+        }
+      }
+    }
+  }
+  // ..Plate potential.
+  if (use_ext_pot) {
+    for (int i = phantom; i < (int)mols.size(); i++) {
+      for (int j = 0; j < mols[i].Size(); j++) {
+        p_tensor[2] += 0.5 * ext_pot->BeadForceOnWall(mols[i].bds[j], box_l);
+      }
+    }
+  }
+
+  //////////////////////////////////
+  // 3. Calculate average forces. //
+  //////////////////////////////////
+  p_tensor[0] = p_tensor[2]/(vp_z*box_l[0]*box_l[1]);
+  p_tensor[1] = p_tensor[3]/(vp_z*box_l[0]*box_l[1]);
 
 }
 

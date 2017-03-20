@@ -1,8 +1,3 @@
-/** The basic Lennard-Jones interaction pair potential truncated at a given
-    cutoff, it also uses arithmetic mixing for sigmas and the  geometric mixing
-    for epsilons.
-  */
-
 #ifndef SRC_FORCE_FIELD_POTENTIAL_TRUNCATED_LJ_H_
 #define SRC_FORCE_FIELD_POTENTIAL_TRUNCATED_LJ_H_
 
@@ -15,25 +10,30 @@
 
 using namespace std; 
 
+/** The Lennard-Jones interaction pair potential truncated at a given cutoff.
+    It uses arithmetic mixing for sigmas and the geometric mixing for epsilons.
+    */
 class PotentialTruncatedLJ : public PotentialPair {
  private:
   /** The cutoff for Lennard-Jones potential. */
   double lj_cutoff;
-  /** The sigma values for the beads in each chain type. */
+  /** Sigma values for different types of beads. */
   map<string, double> sigmas; 
-  /** The epsilon values for the beads in each chain type. */
+  /** Epsilon values for different types of beads. */
   map<string, double> epsilons; 
 
- public: 
-  // Initialization functions.
+ public:
+  /////////////////////
+  // Initialization. //
+  /////////////////////
   PotentialTruncatedLJ(string);
-  /** Read parameters from file, can read in the sigmas and epsilons from
-      multiple chain types (symbols). */
   void ReadParameters();
 
-  // Energy functions.
-  /** Energy between two beads. */
+  ///////////////////////
+  // Energy and force. //
+  ///////////////////////
   double PairEnergy(Bead&, Bead&, double[], int);   
+  double PairForce(Bead&, Bead&, double[], int);
 
 }; 
 

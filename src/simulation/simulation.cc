@@ -710,7 +710,7 @@ void Simulation::PrintStatHeader() {
     info_out << " " << "NoOfMol";
     info_out << " " << "<Density>";
   }
-  info_out << " " << "<Pxx> <Pyy> <Pzz> <Phxx> <Phyy> <Phzz> <Pexx> <Peyy> <Pezz>";
+  info_out << " " << "<Pzz>";
   if (calc_chem_pot) {
     info_out << " " << "mu";
   }
@@ -757,14 +757,10 @@ void Simulation::Sample() {
     //////////////
 
     if (force_field.UseExtPot() && step % (sample_freq*10) == 0) {
-      force_field.CalcPressureVolScalingHSELSlit(mols);
-      //force_field.CalcPressureVirialHSELSlit(mols, density_cumu/ff_avg_counter);
-      //force_field.CalcPressureForceELSlit(mols);
+      force_field.CalcPressureForceLJELSlit(mols);
     }
     else if (step % (sample_freq*10) == 0) {
       force_field.CalcPressureVolScalingHSELSlit(mols);
-      //force_field.CalcPressureVirialHSEL(mols, density_cumu/ff_avg_counter);
-      //force_field.CalcPressureVirialEL(mols);
     }
     /////////////////////////
     // Chemical potential //

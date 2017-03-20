@@ -56,6 +56,9 @@ const double kDz = 0.00001;
 /** Scale the box this number of times when using dipole correction. */
 const int kDiCorrection = 3;
 
-#endif
+/** Constant for wall LJ potential. */
+const double k213 = 1.25992104989;
 
+
+#endif
 

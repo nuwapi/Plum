@@ -8,76 +8,109 @@
 #include "../molecules/bead.h"
 #include "../molecules/molecule.h"
 
+/** The "ewald potential" here refer to long-ranged potentials that interact
+    across multiple periodic boxes. Electrostatic potentials are commonly
+    calculated by Ewald summation but techinically, any r^n potential can be
+    computed by the Ewald method. */
 using namespace std; 
 
-/** Note: 1. repl = reciprocal*/
 class PotentialEwald {
  private:
+  /** Name of the potential. */
   string name;
-  // Energy maps.
-  /** Real part of the Ewald summation of the current configuration. */
-  map<pair<int,int>, double> current_real_energy_map;
-  //// The reciprocal part could be stored in a 1D array. To be optimized in the
-  //// future.
-  /** Reciprocal part of the Ewald summation of the current configuration. */
-  map<pair<int,int>, double> current_repl_energy_map;
-  /** Self part of the Ewald summation of the current configuration. */
-  map<int,           double> current_self_energy_map;
-  // Surface correction of the current configuration.
-  // double current_J;
-  /** Real part of the Ewald summation of the MC trial configuration. */
-  map<pair<int,int>, double> trial_real_energy_map;
-  /** Reciprocal part of the Ewald summation of the MC trial configuration. */
-  map<pair<int,int>, double> trial_repl_energy_map;
-  /** Self part of the Ewald summation of the MC trial configuration. */
-  map<int,           double> trial_self_energy_map;
 
+  ////////////////////////////
+  // Energy and force maps. //
+  ////////////////////////////
+  /** Real energy of the current configuration. */
+  map<pair<int,int>, double> current_real_energy_map;
+  /** Reciprocal energy of the current configuration. */
+  map<pair<int,int>, double> current_repl_energy_map;
+  /** Self energy of the current configuration. */
+  map<int,           double> current_self_energy_map;
+  /** Real energy of the MC trial configuration. */
+  map<pair<int,int>, double> trial_real_energy_map;
+  /** Reciprocal energy of the MC trial configuration. */
+  map<pair<int,int>, double> trial_repl_energy_map;
+  /** Self energy of the MC trial configuration. (unchanged) */
+  map<int,           double> trial_self_energy_map;
+  // The corresponding force maps for the current and the trial configurations.
   map<pair<int,int>, double> current_real_pphi_map;
   map<pair<int,int>, double> current_repl_pphi_map;
   map<pair<int,int>, double> trial_real_pphi_map;
   map<pair<int,int>, double> trial_repl_pphi_map;
 
-  /** Temporarily store the energies for the trial chain. */
-  double * trial_chain_e;
-
-  // Energy sums.
+  //////////////////
+  // Energy sums. //
+  //////////////////
+  /** Total current energy of the system. */
   double E_tot;
+  /** Total current real energy of the system. */
   double current_real_E;
+  /** Total current reciprocal energy of the system. */
   double current_repl_E;
+  /** Total current self energy of the system. */
   double current_self_E;
+  /** Total current dipole correction energy of the system. */
   double current_dipl_E;
+  /** Total trial dipole correction energy of the system. */
   double trial_dipl_E;
+  /** Total energy change upon MC move. */
   double dE;
 
+  ////////////
+  // Other. //
+  ////////////
+  /** Temporarily store the energies for the trial chain for the GCMC routine to
+      avoid recalculation (Actually, this has not been fully utilized, the
+      current simulation code is still doing repetative calcultions). */
+  double * trial_chain_e;
+  /** Decide whether forces are calculated when energies are calculated. */
   bool calc_pphi;
 
  protected:
-  /** The volume of the simulation unit cell, in unit length. */
-  double box_vol;
-  double box_vol_forP;
+  /** The dimesion of the simulation unit cell. They will be the padded
+      dimensions if dipole correction is used. This is also why the Ewald
+      object stores its own box dimensions. */
   double box_l[3];
-  /** When there is a confining wall, we also use dipole correction. */
+  /** The volume of the simulation unit cell. This volume will be the padded
+      volume if dipole correction is used. */
+  double box_vol;
+  /** The scaled volume of the unit cell, used in the volume perturbation method
+      to calculate pressure. */
+  double box_vol_forP;
+  /** Decide whether to use dipole correction. Dipole correction should be used
+      for systems confined along the z-direction. */
   bool dipole_correction;
 
  public:
+  /////////////////////
+  // Initialization. //
+  /////////////////////
   PotentialEwald(string, double[3]);
   ~PotentialEwald();
   virtual void ReadParameters() = 0;
 
-  // Different manipulations of energies.
-  // Part 1.
-  /** Get real space pair energy. */
+  ///////////////////////
+  // Energy and force. //
+  ///////////////////////
+  /** Compute real pair energy. */
   virtual double PairEnergyReal(Bead&, Bead&, int) = 0;
-virtual double PairEnergyRealA(Bead&, Bead&, int) = 0;
-  /** Get reciprocal space pair energy. */
+  /** Compute reciprocal pair energy. */
   virtual double PairEnergyRepl(Bead&, Bead&, int) = 0;
-  virtual double PairEnergyRealForP(Bead&, Bead&, int) = 0;
-  virtual double PairEnergyReplForP(Bead&, Bead&, int) = 0;
-  /** Get the self energy for each bead. */
+  /** Compute the self energy for each bead. */
   virtual double SelfEnergy(Bead&) = 0;
-  // For pressure calculations.
+  /** Compute real pair energy for scaled volume in pressure calculations. */
+  virtual double PairEnergyRealForP(Bead&, Bead&, int) = 0;
+  /** Compute reciprocalpair energy for scaled volume in pressure calculations.
+      */
+  virtual double PairEnergyReplForP(Bead&, Bead&, int) = 0;
+  /** Compute real pair force along Z direction, for pressure calculations. */
   virtual double PairForceZReal(Bead&, Bead&, int) = 0;
+  /** Compute reciprocal pair force along Z direction, for pressure
+      calculations. */
   virtual double PairForceZRepl(Bead&, Bead&, int) = 0;
+  /***/
   virtual double ForceZDipole(Bead&, double) = 0;
   virtual double PairDForceReal(Bead&, Bead&, Bead&, Bead&, int) = 0;
   virtual double PairDForceRepl(Bead&, Bead&, Bead&, Bead&, int) = 0;

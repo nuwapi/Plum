@@ -719,25 +719,8 @@ void ForceField::CalcPressureVirialEL(vector<Molecule>& mols) {
 
 string ForceField::GetPressure() {
   std::ostringstream foo;
-  
-  foo << p_tensor[0]    << " " << p_tensor[1] << " ";
+  foo << p_tensor[0];
 
-  for (int i = 0; i < 4; i++) { 
-    for (int j = i; j < 4; j++) {
-      int index = i * 4 + j;
-      foo << "lj" << i << "_" << j << " " << p_tensor2[index] << " ";
-      foo << "el" << i << "_" << j << " " << p_tensor3[index] << " ";
-    }
-  }
-  foo << "bn " << p_tensor2[17] << " ";
-  foo << "dp " << p_tensor2[18] << " ";
-  foo << "id " << p_tensor2[19] << " ";
- 
-  /* 
-  foo << p_tensor[0] << " " << p_tensor[1] << " " << p_tensor[2] << " "
-      << p_tensor[3] << " " << p_tensor[4] << " " << p_tensor[5] << " "
-      << "0 0 0";
-  */
   return foo.str();
 
 }
@@ -1240,11 +1223,6 @@ double ForceField::TotBondEnergy() {
 
 double ForceField::TotExtEnergy() {
   return ext_pot->GetTotalEnergy();
-
-}
-
-double ForceField::CalculateExternalForce(vector<Molecule>& mols) {
-  return ext_pot->CalculateForce(mols, box_l);
 
 }
 

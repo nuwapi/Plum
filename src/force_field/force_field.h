@@ -233,11 +233,11 @@ class ForceField {
   // Pressure in slit. ///////////////////////////////
   /** Update rho(r1,r2) and calculate pressure from the current rho. */
   void CalcPressureVirialHSELSlit(vector<Molecule>&, double);
-  void CalcPressureForceELSlit(vector<Molecule>&);
   /** Initialize the HS and EL multipliers. */
   void InitPressureVirialHSELSlit();
   void CalcPressureVolScalingHSELSlit(vector<Molecule>&);
   /** Get pressure components from their storage array. */
+  void CalcPressureForceLJELSlit(vector<Molecule>&);
   string GetPressure();
 
   // GC functions.
@@ -281,8 +281,6 @@ class ForceField {
   double TotEwaldEnergy();
   double TotBondEnergy();
   double TotExtEnergy();
-  /** Return the force due to the external potential. */
-  double CalculateExternalForce(vector<Molecule>&);
   /** Return the length of the rigid bond. */
   double RigidBondLen();
   void CoordinateObeyRigidBond(vector<Molecule>&);

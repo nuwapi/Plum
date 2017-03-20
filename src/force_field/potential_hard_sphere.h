@@ -10,21 +10,24 @@
 
 using namespace std; 
 
+/** Hard sphere potential is self-explanatory. */
 class PotentialHardSphere : public PotentialPair {
  private:
-  /** The radius for the beads in each chain type. */
+  /** The radius for different types of beads. */
   map<string, double> radii; 
 
  public: 
-  // Initialization functions.
+  /////////////////////
+  // Initialization. //
+  /////////////////////
   PotentialHardSphere(string);
-  /** Read parameters from file, can read in the sigmas and epsilons from
-      multiple chain types (symbols). */
   void ReadParameters();
 
-  // Energy functions.
-  /** Energy between two beads. */
+  ///////////////////////
+  // Energy and force. //
+  ///////////////////////
   double PairEnergy(Bead&, Bead&, double[], int);   
+  double PairForce(Bead&, Bead&, double[], int);
 
 }; 
 

@@ -46,8 +46,7 @@ double PotentialHardWall::BeadEnergy(Bead& bead, double box_l[]) {
 
 }
 
-// Calculate force PER UNIT AREA due to molecule-wall interaction.
-double PotentialHardWall::CalculateForce(vector<Molecule>& mols, double box_l[]) {
+double PotentialHardWall::BeadForceOnWall(Bead& bead, double box_l[]) {
   // 0 force since this is a hard wall.
   return 0; 
 

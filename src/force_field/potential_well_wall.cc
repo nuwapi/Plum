@@ -54,9 +54,9 @@ double PotentialWellWall::BeadEnergy(Bead& bead, double box_l[]) {
 
 }
 
-// Calculate force PER UNIT AREA due to molecule-wall interaction.
-double PotentialWellWall::CalculateForce(vector < Molecule >& mols, double box_l[]){
-  // 0 force since this is a hard wall.
+double PotentialWellWall::BeadForceOnWall(Bead& bead, double box_l[]) {
+  // 0 force since this is a square well wall. But really, this force is not
+  // well-defined at the boundaries of the well.
   return 0;
 
 }

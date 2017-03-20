@@ -50,15 +50,6 @@ void GetDistVector(Bead& b1, Bead& b2, double box_l[], int npbc,
     if (i < npbc) {
       di -= box_l[i] * round(di / box_l[i]);
     }
-    // Finding the shortest distance between periodic images.
-    if (abs(di) > box_l[i]/2.0) {
-      if (di < 0) {
-        di += box_l[i];
-      }
-      else {
-        di -= box_l[i];
-      }
-    }
     dist[i] = di;
   }
 

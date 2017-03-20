@@ -1,10 +1,3 @@
-/** This external potential places two walls perpendicular to the z-axis one at
-    z=0, one at z=box_l[2] (z-dimension). Each wall has the same
-    Lennard-Jones parameters and cutoff. The potentials are truncated at the
-    cutoff distance from the corresponding wall. The LJ wall potential uses the
-    mixing rules the same as the LJ pair potential. 
-*/
-
 #ifndef SRC_FORCE_FIELD_POTENTIAL_TRUNCATED_LJ_WALL_H_
 #define SRC_FORCE_FIELD_POTENTIAL_TRUNCATED_LJ_WALL_H_
 
@@ -21,6 +14,11 @@
 
 using namespace std;
 
+/** This external potential places two walls perpendicular to the z-axis one at
+    z=0, the other at z=box_l[2]. Each wall has the same Lennard-Jones
+    parameters and cutoff. The potentials are truncated at the cutoff distance
+    from the corresponding wall. The LJ wall potential uses the mixing rules and
+    the cutoff in the same way as the LJ pair potential. */
 class PotentialTruncatedLJWall : public PotentialExternal {
  private:
   double m_cut;
@@ -29,15 +27,18 @@ class PotentialTruncatedLJWall : public PotentialExternal {
   double m_sigWall;
   double m_epWall;
 
- public: 
-  // Initialization functions.
+ public:
+  /////////////////////
+  // Initialization. //
+  /////////////////////
   PotentialTruncatedLJWall(string);
   void ReadParameters();
 
-  // Energy and force.
-  /** Calculate the energy between a bead and the LJ walls. */
+  ///////////////////////
+  // Energy and force. //
+  ///////////////////////
   double BeadEnergy(Bead&, double[]);
-  double CalculateForce(vector < Molecule >&, double[]);
+  double BeadForceOnWall(Bead&, double[]);
 
 };
 

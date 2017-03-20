@@ -159,11 +159,6 @@ double PotentialEwaldCoul::PairEnergyReal(Bead& bead1, Bead& bead2, int npbc) {
 
 }
 
-double PotentialEwaldCoul::PairEnergyRealA(Bead& bead1, Bead& bead2, int npbc) {
-  return 0;
-
-}
-
 // PairEnergyReal for scaled volume.
 double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc) {
   double energy = 0;
@@ -255,11 +250,12 @@ double PotentialEwaldCoul::SelfEnergy(Bead& bead) {
 
 }
 
-// [[[Note]]]: This function should only be used on the point charges on wall z=0!!!
+// Bead 1 should be the wall particle, the calculated force will be the force
+// on bead 1.
 double PotentialEwaldCoul::PairForceZReal(Bead& bead1, Bead& bead2, int npbc) {
   double force_z = 0;
-  double dist[3];
-  GetDistVector(bead2, bead1, box_l, npbc, dist);
+  double r[3];
+  GetDistVector(bead2, bead1, box_l, npbc, r);
   double q1 = bead1.Charge();
   double q2 = bead2.Charge();
   double prefactor = lB*q1*q2;
@@ -269,13 +265,13 @@ double PotentialEwaldCoul::PairForceZReal(Bead& bead1, Bead& bead2, int npbc) {
     for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
       for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
         double r_vec[3];
-        r_vec[0] = dist[0] + i*box_l[0];
-        r_vec[1] = dist[1] + j*box_l[1];
-        r_vec[2] = dist[2] + k*box_l[2];
-        double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
-        if (r > 0 && r <= real_cutoff) {
-          force_z += prefactor * ((prefactor2*exp(-alpha*r*r))
-                     + (erfc(sqrt(alpha)*r)/r)) * r_vec[2]/(r*r);
+        r_vec[0] = r[0] + i*box_l[0];
+        r_vec[1] = r[1] + j*box_l[1];
+        r_vec[2] = r[2] + k*box_l[2];
+        double d = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
+        if (d > 0 && d <= real_cutoff) {
+          force_z += prefactor * ((prefactor2*exp(-alpha*d*d))
+                     + (erfc(sqrt(alpha)*d)/d)) * r_vec[2]/(d*d);
         }
       }
     }
@@ -285,7 +281,8 @@ double PotentialEwaldCoul::PairForceZReal(Bead& bead1, Bead& bead2, int npbc) {
 
 }
 
-// [[[Note]]]: This function should only be used on the point charges on wall z=0!!!
+// Bead 1 should be the wall particle, the calculated force will be the force
+// on bead 1.
 double PotentialEwaldCoul::PairForceZRepl(Bead& bead1, Bead& bead2, int npbc) {
   double force_z = 0;
   double r[3];
