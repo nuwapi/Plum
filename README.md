@@ -63,7 +63,11 @@ and you will find the binary executable `plum` under `your_path_to_plum/plum/bin
 
 ## Runing examples
 
-You will find 3 example inputs in directory `example`.
+You will find 4 example simulation runs in the `examples` directory. Run each example by
+
+```
+your_path_to_plum/bin/plum < run.in > run.log 
+```
 
 ## Contributing
 
