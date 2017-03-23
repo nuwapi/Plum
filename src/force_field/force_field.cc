@@ -719,7 +719,7 @@ void ForceField::CalcPressureVirialEL(vector<Molecule>& mols) {
 
 string ForceField::GetPressure() {
   std::ostringstream foo;
-  foo << p_tensor[0];
+  foo << p_tensor[0] << " " << p_tensor[1];
 
   return foo.str();
 

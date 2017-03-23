@@ -155,9 +155,10 @@ void Molecule::Pivot(double move_size, mt19937& rand_gen, double eq_bond_len,
   // Choose the pivot bead.
   int pivot = floor(len * (double)rand_gen()/rand_gen.max());
   if (pivot == len)  pivot--;
-  // This if for grafted polymers.
-  if (bds[0].Symbol() == "R" || bds[0].Symbol() == "L")
-    pivot = 0;
+  
+  // This if for hard grafted polymers.
+  //if (bds[0].Symbol() == "R" || bds[0].Symbol() == "L")
+  //  pivot = 0;
 
   // Determine the move size.
   double move_size_rand = move_size * (double)rand_gen()/rand_gen.max();
@@ -230,7 +231,7 @@ void Molecule::Pivot(double move_size, mt19937& rand_gen, double eq_bond_len,
 
   // Finally, set moved.
   for (int i = 0; i < len; i++) {
-    if (i != pivot)  bds[i].SetMoved();
+    bds[i].SetMoved();
   }
 
 }
