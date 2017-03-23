@@ -710,7 +710,7 @@ void Simulation::PrintStatHeader() {
     info_out << " " << "NoOfMol";
     info_out << " " << "<Density>";
   }
-  info_out << " " << "<Pzz>";
+  info_out << " " << "<Pzz_LJ> <Pzz_EL>";
   if (calc_chem_pot) {
     info_out << " " << "mu";
   }

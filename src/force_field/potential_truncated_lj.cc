@@ -27,6 +27,7 @@ void PotentialTruncatedLJ::ReadParameters() {
   double epsilon;
 
   cin >> flag >> lj_cutoff;
+  cout << setw(35) << "[PP] Pair potential cutoff  : " << lj_cutoff << endl;
   while (true) {
     cin >> flag >> symbol;
     if (symbol == "end") {
@@ -53,25 +54,30 @@ double PotentialTruncatedLJ::PairEnergy(Bead& bead1, Bead& bead2,
 
   double sigma = (sigmas[bead1.Symbol()] + sigmas[bead2.Symbol()]) / 2;
   double epsilon = sqrt((epsilons[bead1.Symbol()] * epsilons[bead2.Symbol()]));
-  double r6;
+  double r6 = 0;
 
-  if (r > 0)
-    r6 = pow((sigma/r), 6);
-  else
+  if (r <= 0) {
     r6 = -1;
+  }
 
   if (r6 == -1) {
     energy = kVeryLargeEnergy;
   }
   // Repulsive Lennard-Jones.
   else if (lj_cutoff < 0) {
-    if (r < sigma) {
-      energy = 4 * epsilon * (r6*r6 - r6);
+    double r6_ref = pow((1.0/k216), 6);
+    double energy_ref = 4 * epsilon * (r6_ref*r6_ref - r6_ref);
+    if (r < k216*sigma) {
+      r6 = pow((sigma/r), 6);
+      energy = 4 * epsilon * (r6*r6 - r6) - energy_ref;
     }
   }
   // Full Lennard-Jones.
   else if (r < lj_cutoff) {
-    energy = 4 * epsilon * (r6*r6 - r6);
+    double r6_ref = pow((sigma/lj_cutoff), 6);
+    double energy_ref = 4 * epsilon * (r6_ref*r6_ref - r6_ref);
+    r6 = pow((sigma/r), 6);
+    energy = 4 * epsilon * (r6*r6 - r6) - energy_ref;
   }
 
   return energy;
@@ -88,9 +94,7 @@ double PotentialTruncatedLJ::PairForce(Bead& bead1, Bead& bead2,
   double epsilon = sqrt((epsilons[bead1.Symbol()] * epsilons[bead2.Symbol()]));
   double r6;
 
-  if (r > 0)
-    r6 = pow((sigma/r), 6);
-  else
+  if (r <= 0)
     r6 = -1;
 
   if (r6 == -1) {
@@ -98,14 +102,18 @@ double PotentialTruncatedLJ::PairForce(Bead& bead1, Bead& bead2,
   }
   // Repulsive Lennard-Jones.
   else if (lj_cutoff < 0) {
-    if (r < sigma) {
+    if (r < k216*sigma) {
+      r6 = pow((sigma/r), 6);
       force = 4 * epsilon * (r6*r6*12/r - r6*6/r);
-      // With this repulsive LJ formula, the force at the cutoff point is not
-      // well-defined. This should be adjusted in the future.
     }
   }
   // Full Lennard-Jones.
   else if (r < lj_cutoff) {
+    r6 = pow((sigma/r), 6);
+    force = 4 * epsilon * (r6*r6*12/r - r6*6/r);
+  }
+  else {
+    r6 = pow((sigma/lj_cutoff), 6);
     force = 4 * epsilon * (r6*r6*12/r - r6*6/r);
   }
 

@@ -101,7 +101,7 @@ double PotentialExternal::EnergyDifference(vector<Molecule>& mols,
                                            int active_mol, double box_l[],
                                            int npbc) {
   dE = 0; 
-  for (int i = 0; i < (int) mols[active_mol].Size(); i++) {
+  for (int i = 0; i < (int)mols[active_mol].Size(); i++) {
     if (mols[active_mol].bds[i].GetMoved()) {
       double eNew = BeadEnergy(mols[active_mol].bds[i], box_l); 
       if (eNew >= kVeryLargeEnergy) {

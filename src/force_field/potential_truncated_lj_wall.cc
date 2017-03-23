@@ -58,19 +58,28 @@ double PotentialTruncatedLJWall::BeadEnergy(Bead& bead, double box_l[]) {
     return kVeryLargeEnergy;
   }
   else {
-    // Use WCA.
-    if (m_cut < 0) {
+    // Use purely repulsive wall for non-grafted beads.
+    if (m_cut < 0 && bead.Symbol() != "R" && bead.Symbol() != "L") {
+      double r3_ref = pow((1.0/k213), 3);
+      double energy_ref = 2.59807621135 * epsilon * (r3_ref*r3_ref - r3_ref);
       // 1.20093695518 = 3^(1/6)
       if (z < k213*sigma) {
         double r3 = pow((sigma/z), 3);
         // 2.59807621135 = 3*3^0.5/2
-        energy += 2.59807621135 * epsilon * (r3*r3 - r3);
-      }
-      else {
-        double r3 = pow((1.0/k213), 3);
-        energy += 2.59807621135 * epsilon * (r3*r3 - r3);
+        energy += 2.59807621135 * epsilon * (r3*r3 - r3) - energy_ref;
       }
 
+      if (box_l[2] - z < k213*sigma) {
+        double r3 = pow((sigma/(box_l[2] - z)), 3);
+        energy += 2.59807621135 * epsilon * (r3*r3 - r3) - energy_ref;
+      }
+    }
+    // For left (z=0) grafted beads.
+    else if (bead.Symbol() == "L") {
+      // The left attractive well.
+      double r3 = pow((sigma/z), 3);
+      energy +=  2.59807621135 * epsilon * (r3*r3 - r3);
+      // The right purely repulsive wall.
       if (box_l[2] - z < k213*sigma) {
         double r3 = pow((sigma/(box_l[2] - z)), 3);
         energy += 2.59807621135 * epsilon * (r3*r3 - r3);
@@ -80,24 +89,34 @@ double PotentialTruncatedLJWall::BeadEnergy(Bead& bead, double box_l[]) {
         energy += 2.59807621135 * epsilon * (r3*r3 - r3);
       }
     }
-    // Use wall L-J.
-    else {
-      if (z < m_cut) {
+    // For right (z=box_l[2]) grafted beads.
+    else if (bead.Symbol() == "R") {
+      // The right attractive well.
+      double r3 = pow((sigma/(box_l[2] - z)), 3);
+      energy +=  2.59807621135 * epsilon * (r3*r3 - r3);
+      // The left purely repulsive wall.
+      if (z < k213*sigma) {
         double r3 = pow((sigma/z), 3);
-        energy +=  2.59807621135 * epsilon * (r3*r3 - r3);
+        // 2.59807621135 = 3*3^0.5/2
+        energy += 2.59807621135 * epsilon * (r3*r3 - r3);
       }
       else {
-        double r3 = pow((sigma/m_cut), 3);
+        double r3 = pow((1.0/k213), 3);
         energy += 2.59807621135 * epsilon * (r3*r3 - r3);
+      }
+    }
+    // Full LJ potential for non-grafted beads.
+    else {
+      double r3_ref = pow((1.0/m_cut), 3);
+      double energy_ref = 2.59807621135 * epsilon * (r3_ref*r3_ref - r3_ref);
+      if (z < m_cut) {
+        double r3 = pow((sigma/z), 3);
+        energy +=  2.59807621135 * epsilon * (r3*r3 - r3) - energy_ref;
       }
 
       if (box_l[2] - z < m_cut) {
         double r3 = pow((sigma/(box_l[2] - z)), 3);
-        energy +=  2.59807621135 * epsilon * (r3*r3 - r3);
-      }
-      else {
-        double r3 = pow((sigma/m_cut), 3);
-        energy += 2.59807621135 * epsilon * (r3*r3 - r3);
+        energy +=  2.59807621135 * epsilon * (r3*r3 - r3) - energy_ref;
       }
     }
   }
@@ -121,8 +140,8 @@ double PotentialTruncatedLJWall::BeadForceOnWall(Bead& bead, double box_l[]) {
     return kVeryLargeEnergy;
   }
   else {
-    // Use WCA.
-    if (m_cut < 0) {
+    // Use purely repulsive wall for non-grafted beads.
+    if (m_cut < 0 && bead.Symbol() != "R" && bead.Symbol() != "L") {
       if (z < k213*sigma) {
         double r3 = pow((sigma/z), 3);
         force += 2.59807621135 * epsilon * (r3*r3*6/z - r3*3/z);
@@ -133,16 +152,48 @@ double PotentialTruncatedLJWall::BeadForceOnWall(Bead& bead, double box_l[]) {
                  r3*3/(box_l[2]-z));
       }
     }
-    // Use wall L-J.
+    // For left (z=0) grafted beads.
+    else if (bead.Symbol() == "L") {
+      // The left attractive well.
+      double r3 = pow((sigma/z), 3);
+      force += 2.59807621135 * epsilon * (r3*r3*6/z - r3*3/z);
+      // The right purely repulsive wall.
+      if (box_l[2] - z < k213*sigma) {
+        double r3 = pow((sigma/(box_l[2] - z)), 3);
+        force += 2.59807621135 * epsilon * (r3*r3*6/(box_l[2]-z) -
+                 r3*3/(box_l[2]-z));
+      }
+    }
+    // For right (z=box_l[2]) grafted beads.
+    else if (bead.Symbol() == "R") {
+      // The right attractive well.
+      double r3 = pow((sigma/(box_l[2] - z)), 3);
+      force += 2.59807621135 * epsilon * (r3*r3*6/(box_l[2]-z) -
+               r3*3/(box_l[2]-z));
+      // The left purely repulsive wall.
+      if (z < k213*sigma) {
+        double r3 = pow((sigma/z), 3);
+        force += 2.59807621135 * epsilon * (r3*r3*6/z - r3*3/z);
+      }
+    }
+    // Full LJ potential for non-grafted beads.
     else {
       if (z < m_cut) {
         double r3 = pow((sigma/z), 3);
+        force += 2.59807621135 * epsilon * (r3*r3*6/z - r3*3/z);
+      }
+      else {
+        double r3 = pow((sigma/m_cut), 3);
         force += 2.59807621135 * epsilon * (r3*r3*6/z - r3*3/z);
       }
       if (box_l[2] - z < m_cut) {
         double r3 = pow((sigma/(box_l[2] - z)), 3);
         force += 2.59807621135 * epsilon * (r3*r3*6/(box_l[2]-z) - 
                  r3*3/(box_l[2]-z));
+      }
+      else {
+        double r3 = pow((sigma/m_cut), 3);
+        force += 2.59807621135 * epsilon * (r3*r3*6/z - r3*3/z);
       }
     }
   }

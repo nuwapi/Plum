@@ -132,24 +132,28 @@ void PotentialEwaldCoul::ReadParameters() {
 }
 
 double PotentialEwaldCoul::PairEnergyReal(Bead& bead1, Bead& bead2, int npbc) {
-  double energy = 0;
-  double dist[3];
-  GetDistVector(bead1, bead2, box_l, npbc, dist);
   double q1 = bead1.Charge();
   double q2 = bead2.Charge();
-  double prefactor = lB*q1*q2;
+  double energy = 0;
 
-  for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
-    for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
-      for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
-        double r_vec[3];
-        r_vec[0] = dist[0] + i*box_l[0];
-        r_vec[1] = dist[1] + j*box_l[1];
-        r_vec[2] = dist[2] + k*box_l[2];
-        double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
-        if (r > 0 && r <= real_cutoff) {
-        //if (r > 0) {
-          energy += prefactor * erfc(sqrt(alpha)*r)/r;
+  if (q1*q2 == 0)
+    return energy;
+  else {
+    double dist[3];
+    GetDistVector(bead1, bead2, box_l, npbc, dist);
+    double prefactor = lB*q1*q2;
+  
+    for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
+      for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
+        for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
+          double r_vec[3];
+          r_vec[0] = dist[0] + i*box_l[0];
+          r_vec[1] = dist[1] + j*box_l[1];
+          r_vec[2] = dist[2] + k*box_l[2];
+          double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
+          if (r > 0 && r <= real_cutoff) {
+            energy += prefactor * erfc(sqrt(alpha)*r)/r;
+          }
         }
       }
     }
@@ -159,7 +163,7 @@ double PotentialEwaldCoul::PairEnergyReal(Bead& bead1, Bead& bead2, int npbc) {
 
 }
 
-// PairEnergyReal for scaled volume.
+// [Deprecated function] PairEnergyReal for scaled volume.
 double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc) {
   double energy = 0;
   double dist[3];
@@ -181,7 +185,6 @@ double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc
           r_vec[2] = dist[2] + k*(box_l[2]+kDz);
         double r = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
         if (r > 0 && r <= real_cutoff) {
-        //if (r > 0) {
           energy += prefactor * erfc(sqrt(alpha)*r)/r;
         }
       }
@@ -193,21 +196,25 @@ double PotentialEwaldCoul::PairEnergyRealForP(Bead& bead1, Bead& bead2, int npbc
 }
 
 double PotentialEwaldCoul::PairEnergyRepl(Bead& bead1, Bead& bead2, int npbc) {
-  double energy = 0;
-  double r[3];
-  GetDistVector(bead1, bead2, box_l, npbc, r);
   double q1 = bead1.Charge();
   double q2 = bead2.Charge();
-  double prefactor = lB * q1*q2/(kPi*box_vol) * (4*kPi*kPi);
+  double energy = 0;
 
-  for (int lx = 0; lx < repl_ceto[0]; lx++) {
-    for (int ly = 0; ly < repl_ceto[1]; ly++) {
-      for (int lz = 0; lz < repl_ceto[2]; lz++) {
-        int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
-        if (k2[idx] > 0 && k2[idx] <= repl_cutoff) {
-        //if (k2[idx] > 0) {
-          energy += prefactor * ek2[idx]
-                    * cos(kx[lx]*r[0] + ky[ly]*r[1] + kz[lz]*r[2]);
+  if (q1*q2 == 0)
+    return energy;
+  else {
+    double r[3];
+    GetDistVector(bead1, bead2, box_l, npbc, r);
+    double prefactor = lB * q1*q2/(kPi*box_vol) * (4*kPi*kPi);
+  
+    for (int lx = 0; lx < repl_ceto[0]; lx++) {
+      for (int ly = 0; ly < repl_ceto[1]; ly++) {
+        for (int lz = 0; lz < repl_ceto[2]; lz++) {
+          int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
+          if (k2[idx] > 0 && k2[idx] <= repl_cutoff) {
+            energy += prefactor * ek2[idx]
+                      * cos(kx[lx]*r[0] + ky[ly]*r[1] + kz[lz]*r[2]);
+          }
         }
       }
     }
@@ -217,7 +224,7 @@ double PotentialEwaldCoul::PairEnergyRepl(Bead& bead1, Bead& bead2, int npbc) {
 
 }
 
-// PairEnergyRepl for volume scaling.
+// [Deprecated function] PairEnergyRepl for volume scaling.
 double PotentialEwaldCoul::PairEnergyReplForP(Bead& bead1, Bead& bead2, int npbc) {
   double energy = 0;
   double r[3];
@@ -232,7 +239,6 @@ double PotentialEwaldCoul::PairEnergyReplForP(Bead& bead1, Bead& bead2, int npbc
       for (int lz = 0; lz < repl_ceto[2]; lz++) {
         int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
         if (k2_forP[idx] > 0 && k2_forP[idx] <= repl_cutoff) {
-        //if (k2_forP[idx] > 0) {
           energy += prefactor * ek2_forP[idx]
                     * cos(kx[lx]*r[0] + ky[ly]*r[1] + kz_forP[lz]*r[2]);
         }
@@ -253,25 +259,30 @@ double PotentialEwaldCoul::SelfEnergy(Bead& bead) {
 // Bead 1 should be the wall particle, the calculated force will be the force
 // on bead 1.
 double PotentialEwaldCoul::PairForceZReal(Bead& bead1, Bead& bead2, int npbc) {
-  double force_z = 0;
-  double r[3];
-  GetDistVector(bead2, bead1, box_l, npbc, r);
   double q1 = bead1.Charge();
   double q2 = bead2.Charge();
-  double prefactor = lB*q1*q2;
-  double prefactor2 = 2*sqrt(alpha/kPi);
+  double force_z = 0;
 
-  for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
-    for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
-      for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
-        double r_vec[3];
-        r_vec[0] = r[0] + i*box_l[0];
-        r_vec[1] = r[1] + j*box_l[1];
-        r_vec[2] = r[2] + k*box_l[2];
-        double d = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
-        if (d > 0 && d <= real_cutoff) {
-          force_z += prefactor * ((prefactor2*exp(-alpha*d*d))
-                     + (erfc(sqrt(alpha)*d)/d)) * r_vec[2]/(d*d);
+  if (q1*q2 == 0)
+    return force_z;
+  else {
+    double r[3];
+    GetDistVector(bead2, bead1, box_l, npbc, r);
+    double prefactor = lB*q1*q2;
+    double prefactor2 = 2*sqrt(alpha/kPi);
+  
+    for (int i = -real_cell[0]; i <= real_cell[0]; i++) {
+      for (int j = -real_cell[1]; j <= real_cell[1]; j++) {
+        for (int k = -real_cell[2]; k <= real_cell[2]; k++) {
+          double r_vec[3];
+          r_vec[0] = r[0] + i*box_l[0];
+          r_vec[1] = r[1] + j*box_l[1];
+          r_vec[2] = r[2] + k*box_l[2];
+          double d = sqrt(r_vec[0]*r_vec[0]+r_vec[1]*r_vec[1]+r_vec[2]*r_vec[2]);
+          if (d > 0 && d <= real_cutoff) {
+            force_z += prefactor * ((prefactor2*exp(-alpha*d*d))
+                       + (erfc(sqrt(alpha)*d)/d)) * r_vec[2]/(d*d);
+          }
         }
       }
     }
@@ -284,20 +295,25 @@ double PotentialEwaldCoul::PairForceZReal(Bead& bead1, Bead& bead2, int npbc) {
 // Bead 1 should be the wall particle, the calculated force will be the force
 // on bead 1.
 double PotentialEwaldCoul::PairForceZRepl(Bead& bead1, Bead& bead2, int npbc) {
-  double force_z = 0;
-  double r[3];
-  GetDistVector(bead2, bead1, box_l, npbc, r);
   double q1 = bead1.Charge();
   double q2 = bead2.Charge();
-  double prefactor = lB * 4*kPi * q1*q2/box_vol;
+  double force_z = 0;
 
-  for (int lx = 0; lx < repl_ceto[0]; lx++) {
-    for (int ly = 0; ly < repl_ceto[1]; ly++) {
-      for (int lz = 0; lz < repl_ceto[2]; lz++) {
-        int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
-        if (k2[idx] > 0 && k2[idx] <= repl_cutoff) {
-          force_z += prefactor * kz[lz]*ek2[idx]  
-                     * sin(kx[lx]*r[0] + ky[ly]*r[1] + kz[lz]*r[2]);
+  if (q1*q2 == 0)
+    return force_z;
+  else {
+    double r[3];
+    GetDistVector(bead2, bead1, box_l, npbc, r);
+    double prefactor = lB * 4*kPi * q1*q2/box_vol;
+  
+    for (int lx = 0; lx < repl_ceto[0]; lx++) {
+      for (int ly = 0; ly < repl_ceto[1]; ly++) {
+        for (int lz = 0; lz < repl_ceto[2]; lz++) {
+          int idx = repl_ceto[1]*repl_ceto[2]*lx + repl_ceto[2]*ly + lz;
+          if (k2[idx] > 0 && k2[idx] <= repl_cutoff) {
+            force_z += prefactor * kz[lz]*ek2[idx]  
+                       * sin(kx[lx]*r[0] + ky[ly]*r[1] + kz[lz]*r[2]);
+          }
         }
       }
     }
