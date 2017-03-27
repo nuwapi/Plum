@@ -38,7 +38,7 @@ void PotentialTruncatedLJWall::ReadParameters() {
            << sigma << endl;
       cout << setw(35) << "[eP] Epsilon for bead type  : " << symbol << " - "
            << epsilon << endl;
-    } 
+    }
   }
 
 }
@@ -49,6 +49,10 @@ double PotentialTruncatedLJWall::BeadEnergy(Bead& bead, double box_l[]) {
   double z = bead.GetCrd(1, 2);
   double sigma = sigmas[bead.Symbol()];
   double epsilon = epsilons[bead.Symbol()];
+  double R0 = 3*k213*sigma;  // For FENE potential. A bead can only be one bead
+                             // away from the surface.
+  double K = 1;              // For FENE potential.
+                             // http://lammps.sandia.gov/doc/bond_fene.html
 
   if (epsilon == 0) {
     energy = 0;
@@ -78,7 +82,9 @@ double PotentialTruncatedLJWall::BeadEnergy(Bead& bead, double box_l[]) {
     else if (bead.Symbol() == "L") {
       // The left attractive well.
       double r3 = pow((sigma/z), 3);
-      energy +=  2.59807621135 * epsilon * (r3*r3 - r3);
+      energy += 2.59807621135 * epsilon * (r3*r3 - r3);
+      energy += -0.5*K*R0*R0*log(1-pow(z/R0,2));  // FENE part.
+
       // The right purely repulsive wall.
       if (box_l[2] - z < k213*sigma) {
         double r3 = pow((sigma/(box_l[2] - z)), 3);
@@ -94,6 +100,8 @@ double PotentialTruncatedLJWall::BeadEnergy(Bead& bead, double box_l[]) {
       // The right attractive well.
       double r3 = pow((sigma/(box_l[2] - z)), 3);
       energy +=  2.59807621135 * epsilon * (r3*r3 - r3);
+      energy += -0.5*K*R0*R0*log(1-pow((box_l[2]-z)/R0,2));  // FENE part.
+
       // The left purely repulsive wall.
       if (z < k213*sigma) {
         double r3 = pow((sigma/z), 3);
@@ -131,6 +139,8 @@ double PotentialTruncatedLJWall::BeadForceOnWall(Bead& bead, double box_l[]) {
   double z = bead.GetCrd(1, 2);
   double sigma = sigmas[bead.Symbol()];
   double epsilon = epsilons[bead.Symbol()];
+  double R0 = 3*k213*sigma;
+  double K = 1;
 
   if (epsilon == 0) {
     force = 0;
@@ -157,6 +167,8 @@ double PotentialTruncatedLJWall::BeadForceOnWall(Bead& bead, double box_l[]) {
       // The left attractive well.
       double r3 = pow((sigma/z), 3);
       force += 2.59807621135 * epsilon * (r3*r3*6/z - r3*3/z);
+      force += - K*R0*z/(1-pow(z/R0, 2));  // FENE part.
+
       // The right purely repulsive wall.
       if (box_l[2] - z < k213*sigma) {
         double r3 = pow((sigma/(box_l[2] - z)), 3);
@@ -170,6 +182,8 @@ double PotentialTruncatedLJWall::BeadForceOnWall(Bead& bead, double box_l[]) {
       double r3 = pow((sigma/(box_l[2] - z)), 3);
       force += 2.59807621135 * epsilon * (r3*r3*6/(box_l[2]-z) -
                r3*3/(box_l[2]-z));
+      force += - K*R0*(box_l[2]-z)/(1-pow((box_l[2]-z)/R0, 2));  // FENE part.
+
       // The left purely repulsive wall.
       if (z < k213*sigma) {
         double r3 = pow((sigma/z), 3);
