@@ -1,3 +1,6 @@
+#include <string>
+#include <sstream>
+
 #include "force_field.h"
 
 #include "../utilities/constants.h"
@@ -386,25 +389,24 @@ void ForceField::CalcPressureVolScalingHSELSlit(vector<Molecule>& mols) {
 // Currently, the force calculation only outputs the total LJ force and the
 // total Ewald force. One could further categorize the force contributions by
 // molecular species.
-// p_tensor[0]: The ensemble average of LJ contribution.
-// p_tensor[1]: The ensemble average of Ewald contribution.
-// p_tensor[2]: Cumulative LJ contribution.
-// p_tensor[3]: Cumulative Ewald contribution.
+// p_tensor[0]: The ensemble average of ion LJ contribution.
+// p_tensor[1]: The ensemble average of pol LJ contribution.
+// p_tensor[2]: The ensemble average of wall-wall LJ contribution.
+// p_tensor[3]: The ensemble average of ion elec contribution.
+// p_tensor[4]: The ensemble average of pol elec contribution.
+// p_tensor[5]: The ensemble average of wall-wall elec contribution.
+// p_tensor[6]: Cumulative ion LJ contribution.
+// p_tensor[7]: Cumulative pol LJ contribution.
+// p_tensor[8]: Cumulative wall-wall LJ contribution.
+// p_tensor[9]: Cumulative ion elec contribution.
+// p_tensor[10]: Cumulative pol elec contribution.
+// p_tensor[11]: Cumulative wall-wall elec contribution.
 void ForceField::CalcPressureForceLJELSlit(vector<Molecule>& mols) {
   /////////////////////////////////////////
   // 1. Preparation.                     //
   /////////////////////////////////////////
   // The "partition function".
   vp_z++;
-  // Calculate dipole moment in z direction.
-  double dipole_z = 0;
-  for (int i = 0; i < (int)mols.size(); i++) {
-    for (int j = 0; j < mols[i].Size(); j++) {
-      double q = mols[i].bds[j].Charge();
-      double z = mols[i].bds[j].GetCrd(0, 2);
-      dipole_z += q*z;
-    }
-  }
   
   /////////////////////////////////////////
   // 2. Calculate forces.                //
@@ -425,38 +427,75 @@ void ForceField::CalcPressureForceLJELSlit(vector<Molecule>& mols) {
         // Wall z=0 and wall z=box_l[2].
         else                                  C = -1;
 
+        int k_id = 2;  // 0 - ion, 1 - pol, 2 - the other wall.
+        if (j >= phantom) {
+          if (mols[j].Size() > 1)  k_id = 1;
+          else                     k_id = 0;
+        }
+
         if (use_pair_pot && (i < phantom/2 || j >= phantom)) {
           double r[3];
           // This vector will point towards mols[i].bds[0].
           GetDistVector(mols[j].bds[k], mols[i].bds[0], box_l, npbc, r);
           double z_component = r[2]/sqrt(r[0]*r[0]+r[1]*r[1]+r[2]*r[2]);
-          p_tensor[2] += C * z_component * pair_pot->PairForce(mols[j].bds[k],
+          double force = C * z_component * pair_pot->PairForce(mols[j].bds[k],
                          mols[i].bds[0], box_l, npbc);
+          if      (k_id == 0)  p_tensor[6] += force;
+          else if (k_id == 1)  p_tensor[7] += force;
+          else if (k_id == 2 && vp_z == 1)  p_tensor[8] += force;
         }
         if (use_ewald_pot && (i < phantom/2 || j >= phantom)) {
           // The first argument has to be the wall particle.
-          p_tensor[3] += C * ewald_pot->PairForceZReal(mols[i].bds[0],
+          double force = C * ewald_pot->PairForceZReal(mols[i].bds[0],
                          mols[j].bds[k], npbc);
-          p_tensor[3] += C * ewald_pot->PairForceZRepl(mols[i].bds[0],
-                         mols[j].bds[k], npbc);
+          force += C * ewald_pot->PairForceZRepl(mols[i].bds[0],
+                   mols[j].bds[k], npbc);
+          if      (k_id == 0)  p_tensor[9] += force;
+          else if (k_id == 1)  p_tensor[10] += force;
+          else if (k_id == 2 && vp_z == 1)  p_tensor[11] += force;
         }
       }
     }
   }
-  // ..Plate potential.
+  // ..Plate LJ potential.
   if (use_ext_pot) {
     for (int i = phantom; i < (int)mols.size(); i++) {
       for (int j = 0; j < mols[i].Size(); j++) {
-        p_tensor[2] += 0.5 * ext_pot->BeadForceOnWall(mols[i].bds[j], box_l);
+        int j_id = 0;  // 0 - ion, 1 - pol.
+        if (mols[i].Size() > 1)  j_id = 1;
+
+        double force = 0.5 * ext_pot->BeadForceOnWall(mols[i].bds[j], box_l);
+        if      (j_id == 0)  p_tensor[6] += force;
+        else if (j_id == 1)  p_tensor[7] += force;
       }
     }
+  }
+
+  // Since the walls are fixed, only calcualte wall-wall force once.
+  if (vp_z == 1) {
+    p_tensor[2] = p_tensor[8]/(box_l[0]*box_l[1]);
+    p_tensor[5] = p_tensor[11]/(box_l[0]*box_l[1]);
   }
 
   //////////////////////////////////
   // 3. Calculate average forces. //
   //////////////////////////////////
-  p_tensor[0] = p_tensor[2]/(vp_z*box_l[0]*box_l[1]);
-  p_tensor[1] = p_tensor[3]/(vp_z*box_l[0]*box_l[1]);
+  p_tensor[0] = p_tensor[6]/(vp_z*box_l[0]*box_l[1]);
+  p_tensor[1] = p_tensor[7]/(vp_z*box_l[0]*box_l[1]);
+  p_tensor[3] = p_tensor[9]/(vp_z*box_l[0]*box_l[1]);
+  p_tensor[4] = p_tensor[10]/(vp_z*box_l[0]*box_l[1]);
+
+}
+
+string ForceField::GetPressure() {
+  std::ostringstream foo;
+  if (use_ext_pot)
+    foo << p_tensor[0] << " " << p_tensor[1] << " " << p_tensor[2] << " "
+        << p_tensor[3] << " " << p_tensor[4] << " " << p_tensor[5];
+  else
+    foo << "nan";
+
+  return foo.str();
 
 }
 

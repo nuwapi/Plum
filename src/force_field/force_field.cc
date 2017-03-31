@@ -717,14 +717,6 @@ void ForceField::CalcPressureVirialEL(vector<Molecule>& mols) {
 
 }
 
-string ForceField::GetPressure() {
-  std::ostringstream foo;
-  foo << p_tensor[0] << " " << p_tensor[1];
-
-  return foo.str();
-
-}
-
 double ForceField::BeadEnergy(Bead& bead, vector<Molecule>& mols,
                               int current_len, int delete_id, int type) {
   double energy = 0;
