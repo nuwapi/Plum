@@ -138,6 +138,7 @@ Simulation::Simulation() {
   ///////////////////
   // A few checks. //
   ///////////////////
+  UpdateMolCounts();
   if (beta <= 0) {
     cout << "  " << beta << " is not an acceptable beta value. Exiting! "
          << "Program complete." << endl;
@@ -602,16 +603,6 @@ void Simulation::ReadCrd() {
     }
   }
 
-  /*
-  // Count number of chain molecules.
-  n_chain = 0;
-  for (int i = phantom; i < (int)mols.size(); i++) {
-    if (mols[i].Size() > 1) {
-      n_chain++; 
-    }
-  }
-  */
-
   crd_in.close();
 
 }
@@ -710,7 +701,13 @@ void Simulation::PrintStatHeader() {
     info_out << " " << "NoOfMol";
     info_out << " " << "<Density>";
   }
-  info_out << " " << "<Pzz_LJ> <Pzz_EL>";
+  if (force_field.UseExtPot()) {
+    info_out << " " << "<Pzz_LJ_ion> <Pzz_LJ_pol> <Pzz_LJ_wal> <Pzz_EL_ion>"
+             << " " << "<Pzz_EL_pol> <Pzz_EL_wal>";
+  }
+  else {
+    info_out << " " << "<P>";
+  }
   if (calc_chem_pot) {
     info_out << " " << "mu";
   }
