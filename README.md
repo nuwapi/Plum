@@ -28,7 +28,7 @@ Note that this guide is written for the Linux working environment, but it should
 
 ### Prerequisites
 
-Plum uses free C++ library Eigen and requires Eigen during compilation. Before compiling Plum, [download Eigen](https://eigen.tuxfamily.org/) and decompress it to your local directory. Currently, Plum has only been tested with Eigen version 3.2.8, please let me know if you run into compilation errors when using newer versions of Eigen.
+Plum uses free C++ library Eigen and requires Eigen during compilation. Before compiling Plum, [download Eigen](https://eigen.tuxfamily.org/) and decompress it to your local directory. Currently, Plum has only been tested with Eigen versions 3.3.3 and 3.2.8, please let me know if you run into compilation errors when using other versions of Eigen.
 
 You should also make sure that `cmake` and `gcc` are installed properly on your machine.
 
