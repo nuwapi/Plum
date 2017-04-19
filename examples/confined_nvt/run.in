@@ -10,8 +10,8 @@ s1_PBC_dimensions               2
 s1_beta_(1/kBT)                 1
 s1_MC_move_size_in_unit_length  2
 s1_calc_chem_pot                0
-s1_number_of_surface_sites      0
-s1_number_of_surf_counterions   0
+s1_number_of_surface_sites      18
+s1_number_of_surf_counterions   18
 s1_number_of_grafted_chains     0
 s1_number_of_grafted_counterion 0
 s1_prob_b_bead_translation      0.90
