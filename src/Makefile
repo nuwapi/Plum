@@ -1,7 +1,7 @@
 CXX=g++
 CXXFLAGS=-std=c++11 -Wall -O3 # -pg
 LIBS=-lm -lfftw3
-INC=-I /home/nuowang/bin/eigen-3.2.8
+INC=-I /home/username/bin/eigen-3.2.8
 # INC=-I/usr/local/lib/ is not explicitly added
 
 MAIN_SRC=main.cc
