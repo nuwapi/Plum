@@ -43,7 +43,7 @@ mkdir bin
 
 Find the Makefile under `your_path_to_plum/plum/src` and change the following line in the Makefile
 ```
-INC=-I /home/nuowang/bin/eigen-3.2.8
+INC=-I /home/username/bin/eigen-3.2.8
 ```
 
 to
