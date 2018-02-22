@@ -22,7 +22,7 @@ In the future, we would also like to implement the following features in Plum:
 
 ## Getting Started
 
-The following instructions explain how to compile Plum on your local machine. [Example Plum simulations](examples) are also provided to help you get started with your own project using Plum. Detailed explanations of the input and output files, and the Plum source codes can be found in our [wiki](https://github.com/nuowang/Plum/wiki).
+The following instructions explain how to compile Plum on your local machine. [Example Plum simulations](examples) are also provided to help you get started with your own project using Plum. Detailed explanations of the input and output files, and the Plum source codes can be found in our [wiki](https://github.com/nuwapi/Plum/wiki).
 
 Note that this guide is written for the Linux working environment, but it should also apply to the Mac OS terminal and Xcode.
 
